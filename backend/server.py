@@ -13,6 +13,8 @@ import uuid
 # Import models and auth
 from models import *
 from auth import *
+from payment_routes import payment_router
+from admin_routes import admin_router
 
 # Import payment integrations
 from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
@@ -45,14 +47,19 @@ app.add_middleware(
 async def get_database() -> AsyncIOMotorDatabase:
     return db
 
-# Dependency injection for auth
-async def get_current_user_dep(
-    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False)),
-    database: AsyncIOMotorDatabase = Depends(get_database)
-) -> Optional[User]:
-    if not credentials:
-        return None
-    return await get_current_user(credentials, database)
+# Update dependency injection for auth and payment routes
+def get_current_user_with_db(database: AsyncIOMotorDatabase = Depends(get_database)):
+    async def _get_current_user(
+        credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False))
+    ) -> Optional[User]:
+        if not credentials:
+            return None
+        return await get_current_user(credentials, database)
+    return _get_current_user
+
+# Fix payment router dependencies
+payment_router.dependency_overrides[lambda: None] = get_database
+admin_router.dependency_overrides[lambda: None] = get_database
 
 # ============================================================================
 # AUTHENTICATION ROUTES
@@ -100,7 +107,7 @@ async def login(login_data: UserLogin, database: AsyncIOMotorDatabase = Depends(
     return TokenResponse(access_token=access_token, user=user_response)
 
 @api_router.get("/auth/me", response_model=User)
-async def get_me(current_user: User = Depends(get_current_user_dep)):
+async def get_me(current_user: User = Depends(get_current_user_with_db(Depends(get_database)))):
     if not current_user:
         raise HTTPException(status_code=401, detail="Not authenticated")
     return current_user
@@ -140,7 +147,7 @@ async def get_product(product_id: str, database: AsyncIOMotorDatabase = Depends(
 @api_router.post("/products", response_model=Product)
 async def create_product(
     product_data: ProductCreate,
-    current_user: User = Depends(get_current_user_dep),
+    current_user: User = Depends(get_current_user_with_db(Depends(get_database))),
     database: AsyncIOMotorDatabase = Depends(get_database)
 ):
     if not current_user or not current_user.is_admin:
@@ -154,7 +161,7 @@ async def create_product(
 async def update_product(
     product_id: str,
     product_data: ProductUpdate,
-    current_user: User = Depends(get_current_user_dep),
+    current_user: User = Depends(get_current_user_with_db(Depends(get_database))),
     database: AsyncIOMotorDatabase = Depends(get_database)
 ):
     if not current_user or not current_user.is_admin:
@@ -186,7 +193,7 @@ async def get_categories(database: AsyncIOMotorDatabase = Depends(get_database))
 @api_router.post("/categories", response_model=Category)
 async def create_category(
     category_data: CategoryCreate,
-    current_user: User = Depends(get_current_user_dep),
+    current_user: User = Depends(get_current_user_with_db(Depends(get_database))),
     database: AsyncIOMotorDatabase = Depends(get_database)
 ):
     if not current_user or not current_user.is_admin:
@@ -210,7 +217,7 @@ def get_session_id(request: Request) -> str:
 async def get_cart(
     request: Request,
     response: Response,
-    current_user: Optional[User] = Depends(get_current_user_dep),
+    current_user: Optional[User] = Depends(get_current_user_with_db(Depends(get_database))),
     database: AsyncIOMotorDatabase = Depends(get_database)
 ):
     if current_user:
@@ -252,7 +259,7 @@ async def add_to_cart(
     cart_item: CartAdd,
     request: Request,
     response: Response,
-    current_user: Optional[User] = Depends(get_current_user_dep),
+    current_user: Optional[User] = Depends(get_current_user_with_db(Depends(get_database))),
     database: AsyncIOMotorDatabase = Depends(get_database)
 ):
     # Verify product exists and has stock
@@ -307,7 +314,7 @@ async def remove_from_cart(
     color: str,
     size: SizeEnum,
     request: Request,
-    current_user: Optional[User] = Depends(get_current_user_dep),
+    current_user: Optional[User] = Depends(get_current_user_with_db(Depends(get_database))),
     database: AsyncIOMotorDatabase = Depends(get_database)
 ):
     if current_user:
@@ -427,7 +434,7 @@ async def create_order(
 
 @api_router.get("/orders", response_model=List[Order])
 async def get_orders(
-    current_user: User = Depends(get_current_user_dep),
+    current_user: User = Depends(get_current_user_with_db(Depends(get_database))),
     database: AsyncIOMotorDatabase = Depends(get_database)
 ):
     if not current_user:
@@ -443,7 +450,7 @@ async def get_orders(
 @api_router.get("/orders/{order_id}", response_model=Order)
 async def get_order(
     order_id: str,
-    current_user: Optional[User] = Depends(get_current_user_dep),
+    current_user: Optional[User] = Depends(get_current_user_with_db(Depends(get_database))),
     database: AsyncIOMotorDatabase = Depends(get_database)
 ):
     order = await database.orders.find_one({"id": order_id})
@@ -459,7 +466,9 @@ async def get_order(
     else:
         raise HTTPException(status_code=403, detail="Access denied")
 
-# Include the router in the main app
+# Include all routers
+api_router.include_router(payment_router)
+api_router.include_router(admin_router)
 app.include_router(api_router)
 
 # Configure logging
