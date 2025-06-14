@@ -248,6 +248,11 @@ export const FAQ = () => {
     }
   ];
 
+  const handleFAQClick = (index) => {
+    // Close the current FAQ if it's already open, otherwise open the new one
+    setOpenFAQ(openFAQ === index ? null : index);
+  };
+
   return (
     <div className="bg-gray-50 py-8">
       <div className="container mx-auto p-4">
@@ -259,7 +264,7 @@ export const FAQ = () => {
             <div key={index} className="mb-4 bg-white rounded-lg shadow">
               <button
                 className="w-full p-4 text-left flex justify-between items-center hover:bg-gray-50 transition-colors"
-                onClick={() => setOpenFAQ(openFAQ === index ? null : index)}
+                onClick={() => handleFAQClick(index)}
               >
                 <span className="font-semibold text-gray-800">{faq.question}</span>
                 <span className="text-2xl text-gray-500">
@@ -267,7 +272,7 @@ export const FAQ = () => {
                 </span>
               </button>
               {openFAQ === index && (
-                <div className="p-4 pt-0 text-gray-600">
+                <div className="p-4 pt-0 text-gray-600 animate-fade-in">
                   {faq.answer}
                 </div>
               )}
