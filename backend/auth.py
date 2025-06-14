@@ -7,6 +7,7 @@ from passlib.context import CryptContext
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from .models import User, UserInDB
 import os
+import uuid
 
 # Security configurations
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
