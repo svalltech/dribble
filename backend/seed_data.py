@@ -3,13 +3,71 @@ import os
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 from pathlib import Path
-from models import *
-from auth import get_password_hash
 import uuid
+from datetime import datetime
+from passlib.context import CryptContext
+from pydantic import BaseModel, Field, EmailStr
+from typing import List, Optional, Dict, Any
+from enum import Enum
 
 # Load environment
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
+
+# Password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def get_password_hash(password: str) -> str:
+    """Hash a password."""
+    return pwd_context.hash(password)
+
+# Define models (simplified for seeding)
+class SizeEnum(str, Enum):
+    XS = "XS"
+    S = "S"
+    M = "M"
+    L = "L"
+    XL = "XL"
+    XXL = "XXL"
+
+class ProductVariant(BaseModel):
+    color: str
+    size: SizeEnum
+    stock_quantity: int
+    sku: str
+
+class Product(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: str
+    category: str
+    base_price: float
+    bulk_price: float
+    gsm: Optional[str] = None
+    material: str = "100% Cotton"
+    variants: List[ProductVariant]
+    images: List[str]
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class Category(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: Optional[str] = None
+    image: Optional[str] = None
+    is_active: bool = True
+    sort_order: int = 0
+
+class UserInDB(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    email: EmailStr
+    full_name: str
+    phone: Optional[str] = None
+    is_active: bool = True
+    is_admin: bool = False
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    hashed_password: str
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
