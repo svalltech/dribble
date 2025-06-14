@@ -318,14 +318,21 @@ metadata:
 
 test_plan:
   current_focus:
-    - "FAQ Section"
-  stuck_tasks: 
-    - "FAQ Section"
-  test_all: false
+    - "Authentication System"
+    - "Product Management"
+    - "Cart Operations"
+    - "Order Processing"
+    - "Category Management"
+    - "Database Integration"
+    - "API Security"
+  stuck_tasks: []
+  test_all: true
   test_priority: "high_first"
 
 agent_communication:
   - agent: "testing"
     message: "Initializing testing for BulkPlainTshirt.com clone website. Will test all components as requested in the user problem statement."
   - agent: "testing"
-    message: "Completed testing of all components. Most features are working correctly, but there's an issue with the FAQ section - multiple FAQs can be open simultaneously, which contradicts the expected behavior where only one FAQ should be open at a time. All other components are working as expected."
+    message: "Completed testing of all frontend components. Most features are working correctly, but there's an issue with the FAQ section - multiple FAQs can be open simultaneously, which contradicts the expected behavior where only one FAQ should be open at a time. All other components are working as expected."
+  - agent: "testing"
+    message: "Starting backend testing for the DRIBBLE e-commerce application. Will test all major functionality including Authentication System, Product Management, Cart Operations, Order Processing, Category Management, Database Integration, and API Security."
