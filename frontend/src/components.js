@@ -124,7 +124,7 @@ export const AppProvider = ({ children }) => {
   return (
     <AppContext.Provider value={{
       user, cart, loading,
-      login, logout, fetchCart,
+      login, logout, register, fetchCart,
       addToCart, removeFromCart
     }}>
       {children}
