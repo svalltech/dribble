@@ -215,6 +215,7 @@ class Category(BaseModel):
     name: str
     description: Optional[str] = None
     image: Optional[str] = None
+    color: str = "bg-gray-500"  # Tailwind CSS color class for navigation button
     is_active: bool = True
     sort_order: int = 0
 
@@ -222,6 +223,7 @@ class CategoryCreate(BaseModel):
     name: str
     description: Optional[str] = None
     image: Optional[str] = None
+    color: str = "bg-gray-500"
     sort_order: int = 0
 
 # Analytics Models
