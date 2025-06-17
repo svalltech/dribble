@@ -13,6 +13,8 @@ import {
   FAQ,
   Footer 
 } from './components';
+import { CheckoutPage } from './pages/CheckoutPage';
+import { AdminPanel } from './pages/AdminPanel';
 
 const API_URL = `${process.env.REACT_APP_BACKEND_URL || 'https://aa4f6fe3-4ad0-49ff-bf5e-4f672779c6bd.preview.emergentagent.com'}/api`;
 
@@ -47,7 +49,7 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      <Navigation onCategorySelect={handleCategorySelection} />
+      <Navigation onCategorySelect={handleCategorySelection} selectedCategory={selectedCategory} />
       <ProductInfo />
       <SizeChart productId={currentProductId} selectedCategory={selectedCategory} />
       <ContentSection />
@@ -57,26 +59,21 @@ const Home = () => {
   );
 };
 
-// Checkout Page Component
-const CheckoutPage = () => {
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <div className="container mx-auto px-4 py-12">
-        <h1 className="text-3xl font-bold text-center mb-8">Checkout</h1>
-        <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
-          <p className="text-center text-gray-600">
-            Checkout functionality will be implemented with payment gateway integration.
-          </p>
-        </div>
-      </div>
-      <Footer />
-    </div>
-  );
-};
-
 // Payment Success Page
 const PaymentSuccessPage = () => {
+  const [orderDetails, setOrderDetails] = useState(null);
+  
+  useEffect(() => {
+    // Get order ID from URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderId = urlParams.get('order_id');
+    
+    if (orderId) {
+      // Fetch order details if needed
+      setOrderDetails({ id: orderId });
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -87,7 +84,13 @@ const PaymentSuccessPage = () => {
           </div>
           <h1 className="text-2xl font-bold text-green-600 mb-4">Payment Successful!</h1>
           <p className="text-gray-600 mb-6">Thank you for your order. You will receive a confirmation email shortly.</p>
-          <button className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+          {orderDetails && (
+            <p className="text-sm text-gray-500 mb-4">Order ID: {orderDetails.id.slice(-8)}</p>
+          )}
+          <button 
+            onClick={() => window.location.href = '/'}
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+          >
             Continue Shopping
           </button>
         </div>
@@ -109,39 +112,23 @@ const PaymentCancelPage = () => {
           </div>
           <h1 className="text-2xl font-bold text-red-600 mb-4">Payment Cancelled</h1>
           <p className="text-gray-600 mb-6">Your payment was cancelled. You can try again or continue shopping.</p>
-          <button className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
-            Try Again
-          </button>
+          <div className="space-y-2">
+            <button 
+              onClick={() => window.location.href = '/checkout'}
+              className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Try Again
+            </button>
+            <button 
+              onClick={() => window.location.href = '/'}
+              className="w-full bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              Continue Shopping
+            </button>
+          </div>
         </div>
       </div>
       <Footer />
-    </div>
-  );
-};
-
-// Admin Panel Component
-const AdminPanel = () => {
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-blue-600 text-white p-4">
-        <h1 className="text-2xl font-bold">DRIBBLE Admin Dashboard</h1>
-      </div>
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-bold mb-4">Products</h3>
-            <p className="text-gray-600">Manage product inventory and pricing</p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-bold mb-4">Orders</h3>
-            <p className="text-gray-600">View and manage customer orders</p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-bold mb-4">Analytics</h3>
-            <p className="text-gray-600">View sales and performance metrics</p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
