@@ -164,6 +164,9 @@ backend:
       - working: true
         agent: "main"
         comment: "FIXED: Backend cart endpoints now operational. Ready for testing cart functionality."
+      - working: true
+        agent: "testing"
+        comment: "Cart operations are working correctly. Successfully tested cart functionality for both authenticated and anonymous users. Cart retrieval with pricing calculations is working as expected. Adding and removing items from cart works properly. Bulk pricing logic for 15+ pieces is correctly implemented."
 
   - task: "Order Processing"
     implemented: true
