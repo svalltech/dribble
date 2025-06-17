@@ -432,7 +432,7 @@ frontend:
 
   - task: "Cart Functionality"
     implemented: true
-    working: false
+    working: true
     file: "/app/frontend/src/components.js"
     stuck_count: 0
     priority: "high"
@@ -444,6 +444,9 @@ frontend:
       - working: false
         agent: "testing"
         comment: "Cart functionality UI works correctly. Users can enter quantities for in-stock items and see the order summary with correct calculations. The 'Add to Cart' button is present and clickable. However, backend integration is not working - API calls to add items to cart fail with network errors."
+      - working: true
+        agent: "testing"
+        comment: "Cart functionality is now working correctly. The UI allows users to enter quantities for in-stock items and displays the order summary with correct calculations. The 'Add to Cart' button is present and clickable. Backend API calls are now successful with 200 status codes. However, there's still an issue with the cart counter not updating after adding items to cart, but the API integration is working properly."
 
   - task: "Checkout Process"
     implemented: true
