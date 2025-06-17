@@ -251,24 +251,51 @@ export const SizeChart = ({ productId }) => {
   const [product, setProduct] = useState(null);
 
   useEffect(() => {
-    // Fetch size chart data for specific product
-    const fetchSizeChart = async () => {
+    // Fetch size chart data and product details
+    const fetchData = async () => {
       try {
+        // Fetch size chart data for specific product
         if (productId) {
-          const response = await axios.get(`${API_URL}/products/${productId}/sizechart`);
-          setSizeChartData(response.data);
-        }
-        
-        // Also fetch product details for cart operations
-        const productResponse = await axios.get(`${API_URL}/products`);
-        if (productResponse.data && productResponse.data.length > 0) {
-          setProduct(productResponse.data[0]); // Use first product for demo
+          try {
+            const response = await axios.get(`${API_URL}/products/${productId}/sizechart`);
+            setSizeChartData(response.data);
+          } catch (error) {
+            console.log('Size chart API not available, using defaults');
+          }
+          
+          // Fetch the specific product details
+          const productResponse = await axios.get(`${API_URL}/products/${productId}`);
+          setProduct(productResponse.data);
+        } else {
+          // If no productId provided, fetch the first available product
+          const productsResponse = await axios.get(`${API_URL}/products?limit=1`);
+          if (productsResponse.data && productsResponse.data.length > 0) {
+            const firstProduct = productsResponse.data[0];
+            setProduct(firstProduct);
+            
+            // Try to fetch size chart for this product
+            try {
+              const sizeChartResponse = await axios.get(`${API_URL}/products/${firstProduct.id}/sizechart`);
+              setSizeChartData(sizeChartResponse.data);
+            } catch (error) {
+              console.log('Size chart API not available, using defaults');
+            }
+          }
         }
       } catch (error) {
-        console.error('Error fetching size chart:', error);
+        console.error('Error fetching data:', error);
+        // Create a fallback product for demo purposes
+        setProduct({
+          id: 'demo-product-1',
+          name: 'Oversized Drop-shoulder, 210gsm, Terry cotton/Longjohit Heavy Gauge, 100% Cotton',
+          category: 'Oversize 210gsm',
+          base_price: 319,
+          bulk_price: 279
+        });
       }
     };
-    fetchSizeChart();
+    
+    fetchData();
   }, [productId]);
 
   const handleQuantityChange = (color, size, quantity) => {
