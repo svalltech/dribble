@@ -153,6 +153,10 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/checkout" element={<CheckoutPage />} />
+            <Route path="/payment/success" element={<PaymentSuccessPage />} />
+            <Route path="/payment/cancel" element={<PaymentCancelPage />} />
+            <Route path="/admin-ui/dashboard" element={<AdminPanel />} />
           </Routes>
         </BrowserRouter>
         <Toaster position="top-right" />
