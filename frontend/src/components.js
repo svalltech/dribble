@@ -14,7 +14,7 @@ export const AppProvider = ({ children }) => {
   const [cart, setCart] = useState({ items: [], total: 0 });
   const [loading, setLoading] = useState(false);
 
-  // Authentication functions (same as before)
+  // Authentication functions
   const login = async (email, password) => {
     try {
       setLoading(true);
@@ -27,6 +27,24 @@ export const AppProvider = ({ children }) => {
       return true;
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Login failed');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const register = async (userData) => {
+    try {
+      setLoading(true);
+      const response = await axios.post(`${API_URL}/auth/register`, userData);
+      const { access_token, user: userResponse } = response.data;
+      localStorage.setItem('token', access_token);
+      setUser(userResponse);
+      await fetchCart();
+      toast.success('Registration successful!');
+      return true;
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Registration failed');
       return false;
     } finally {
       setLoading(false);
