@@ -58,9 +58,10 @@ def get_current_user_with_db(database: AsyncIOMotorDatabase = Depends(get_databa
         return await get_current_user(credentials, database)
     return _get_current_user
 
-# Fix payment router dependencies
+# Fix payment router and admin router dependencies
 payment_router.dependency_overrides[lambda: None] = get_database
 admin_router.dependency_overrides[lambda: None] = get_database
+admin_ui_router.dependency_overrides[lambda: None] = get_database
 
 # ============================================================================
 # AUTHENTICATION ROUTES
