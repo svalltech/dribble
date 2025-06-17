@@ -5,7 +5,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from .models import User, UserInDB
+from models import User, UserInDB
 import os
 import uuid
 
