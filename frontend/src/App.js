@@ -14,7 +14,7 @@ import {
   Footer 
 } from './components';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_URL = `${process.env.REACT_APP_BACKEND_URL || 'https://e6320fa4-c3c3-4462-8bde-d717fd5efcd4.preview.emergentagent.com'}/api`;
 
 const Home = () => {
   const [currentProductId, setCurrentProductId] = useState(null);
