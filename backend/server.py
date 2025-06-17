@@ -45,20 +45,14 @@ app.add_middleware(
 async def get_database() -> AsyncIOMotorDatabase:
     return db
 
-# Update dependency injection for auth and payment routes
-def get_current_user_with_db(database: AsyncIOMotorDatabase = Depends(get_database)):
-    async def _get_current_user(
-        credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False))
-    ) -> Optional[User]:
-        if not credentials:
-            return None
-        return await get_current_user(credentials, database)
-    return _get_current_user
-
-# Fix payment router and admin router dependencies
-payment_router.dependency_overrides[lambda: None] = get_database
-admin_router.dependency_overrides[lambda: None] = get_database
-admin_ui_router.dependency_overrides[lambda: None] = get_database
+# Dependency injection for auth
+async def get_current_user_with_db(
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False)),
+    database: AsyncIOMotorDatabase = Depends(get_database)
+) -> Optional[User]:
+    if not credentials:
+        return None
+    return await get_current_user(credentials, database)
 
 # ============================================================================
 # AUTHENTICATION ROUTES
