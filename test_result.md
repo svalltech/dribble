@@ -496,18 +496,18 @@ frontend:
 metadata:
   created_by: "testing_agent"
   version: "1.0"
-  test_sequence: 2
+  test_sequence: 3
   run_ui: true
 
 test_plan:
   current_focus:
-    - "Product Display Integration"
-    - "Cart Integration"
+    - "Cart Counter Update"
     - "User Authentication Flow"
-    - "E-commerce User Journey"
-    - "UI Components Integration"
+    - "Checkout Process"
+    - "Payment Integration"
+    - "Admin Panel"
   stuck_tasks: []
-  test_all: true
+  test_all: false
   test_priority: "high_first"
 
 agent_communication:
