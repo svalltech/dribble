@@ -144,6 +144,56 @@ async def get_product(product_id: str, database: AsyncIOMotorDatabase = Depends(
         raise HTTPException(status_code=404, detail="Product not found")
     return Product(**product)
 
+@api_router.get("/products/{product_id}/sizechart")
+async def get_product_sizechart(product_id: str, database: AsyncIOMotorDatabase = Depends(get_database)):
+    """Get size chart and pricing for a specific product."""
+    product = await database.products.find_one({"id": product_id, "is_active": True})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    return {
+        "colors": product.get("size_chart", {}).get("colors", ["Black", "White", "Lavender", "Beige", "Red", "Sage Green", "Brown", "Maroon", "Orange", "Navy"]),
+        "sizes": product.get("size_chart", {}).get("sizes", ["S", "M", "L", "XL", "XXL"]),
+        "chart_code": product.get("size_chart", {}).get("chart_code", "OS210"),
+        "pricing": {
+            "bulk": {
+                "quantity": product.get("pricing_rules", {}).get("bulk_label", "More than 15pcs"),
+                "price": f"{product.get('pricing_rules', {}).get('bulk_price', 279)}₹"
+            },
+            "regular": {
+                "quantity": product.get("pricing_rules", {}).get("regular_label", "Less than 15pcs"),
+                "price": f"{product.get('pricing_rules', {}).get('regular_price', 319)}₹"
+            }
+        }
+    }
+
+@api_router.put("/products/{product_id}/sizechart")
+async def update_product_sizechart(
+    product_id: str,
+    size_chart_data: dict,
+    current_user: User = Depends(get_current_user_with_db(Depends(get_database))),
+    database: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Update size chart and pricing for a specific product (Admin only)."""
+    if not current_user or not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    update_data = {
+        "size_chart": size_chart_data.get("size_chart", {}),
+        "pricing_rules": size_chart_data.get("pricing_rules", {}),
+        "updated_at": datetime.utcnow()
+    }
+    
+    result = await database.products.update_one(
+        {"id": product_id},
+        {"$set": update_data}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    return {"message": "Size chart and pricing updated successfully"}
+
 @api_router.post("/products", response_model=Product)
 async def create_product(
     product_data: ProductCreate,
