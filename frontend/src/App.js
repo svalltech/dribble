@@ -14,6 +14,8 @@ import {
   Footer 
 } from './components';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
 const Home = () => {
   const [currentProductId, setCurrentProductId] = useState(null);
 
