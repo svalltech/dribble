@@ -14,12 +14,29 @@ import {
 } from './components';
 
 const Home = () => {
+  const [currentProductId, setCurrentProductId] = useState(null);
+
+  useEffect(() => {
+    // Fetch the first product to display in size chart
+    const fetchDefaultProduct = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/products?limit=1`);
+        if (response.data && response.data.length > 0) {
+          setCurrentProductId(response.data[0].id);
+        }
+      } catch (error) {
+        console.error('Error fetching default product:', error);
+      }
+    };
+    fetchDefaultProduct();
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
       <Navigation />
       <ProductInfo />
-      <SizeChart />
+      <SizeChart productId={currentProductId} />
       <ContentSection />
       <FAQ />
       <Footer />
