@@ -269,7 +269,7 @@ export const ProductInfo = () => {
   );
 };
 
-// Size Chart Component - EXACT replica with working cart functionality
+// Size Chart Component - EXACT replica with quantity inputs and cart functionality
 export const SizeChart = ({ productId }) => {
   const { addToCart } = useApp();
   const [sizeChartData, setSizeChartData] = useState({
@@ -281,7 +281,7 @@ export const SizeChart = ({ productId }) => {
     }
   });
 
-  const [selectedItems, setSelectedItems] = useState({});
+  const [quantities, setQuantities] = useState({});
   const [product, setProduct] = useState(null);
 
   useEffect(() => {
@@ -305,29 +305,44 @@ export const SizeChart = ({ productId }) => {
     fetchSizeChart();
   }, [productId]);
 
-  const handleCheckboxChange = (color, size) => {
+  const handleQuantityChange = (color, size, quantity) => {
     const key = `${color}-${size}`;
-    setSelectedItems(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
+    const numQuantity = parseInt(quantity) || 0;
+    
+    setQuantities(prev => {
+      const updated = { ...prev };
+      if (numQuantity === 0) {
+        delete updated[key];
+      } else {
+        updated[key] = numQuantity;
+      }
+      return updated;
+    });
   };
 
-  // Calculate total selected items and pricing
+  // Calculate total quantity and pricing
   const calculateTotal = () => {
-    const selectedCount = Object.values(selectedItems).filter(Boolean).length;
-    if (selectedCount === 0) return { count: 0, total: 0, isBulk: false };
+    const totalQuantity = Object.values(quantities).reduce((sum, qty) => sum + qty, 0);
+    if (totalQuantity === 0) return { totalQuantity: 0, totalPrice: 0, isBulk: false, pricePerItem: 0 };
     
-    const isBulk = selectedCount >= parseInt(sizeChartData.pricing.bulk.quantity.replace('pcs', ''));
-    const pricePerItem = isBulk ? 
-      parseFloat(sizeChartData.pricing.bulk.price.replace('₹', '')) : 
-      parseFloat(sizeChartData.pricing.regular.price.replace('₹', ''));
+    // Extract pricing from the configured data
+    const bulkThreshold = parseInt(sizeChartData.pricing.bulk.quantity.replace(/[^\d]/g, ''));
+    const isBulk = totalQuantity >= bulkThreshold;
+    
+    const bulkPrice = parseFloat(sizeChartData.pricing.bulk.price.replace('₹', ''));
+    const regularPrice = parseFloat(sizeChartData.pricing.regular.price.replace('₹', ''));
+    
+    const pricePerItem = isBulk ? bulkPrice : regularPrice;
+    const totalPrice = totalQuantity * pricePerItem;
     
     return {
-      count: selectedCount,
-      total: selectedCount * pricePerItem,
+      totalQuantity,
+      totalPrice,
       isBulk,
-      pricePerItem
+      pricePerItem,
+      bulkPrice,
+      regularPrice,
+      bulkThreshold
     };
   };
 
@@ -337,22 +352,22 @@ export const SizeChart = ({ productId }) => {
       return;
     }
 
-    const selectedKeys = Object.keys(selectedItems).filter(key => selectedItems[key]);
-    if (selectedKeys.length === 0) {
-      toast.error('Please select at least one size and color combination');
+    const quantityEntries = Object.entries(quantities).filter(([_, qty]) => qty > 0);
+    if (quantityEntries.length === 0) {
+      toast.error('Please enter quantities for at least one size and color combination');
       return;
     }
 
     try {
-      // Add each selected combination to cart
-      for (const key of selectedKeys) {
+      // Add each selected combination to cart with specified quantities
+      for (const [key, quantity] of quantityEntries) {
         const [color, size] = key.split('-');
-        await addToCart(product.id, color, size, 1);
+        await addToCart(product.id, color, size, quantity);
       }
       
-      // Clear selections after adding to cart
-      setSelectedItems({});
-      toast.success(`Added ${selectedKeys.length} items to cart!`);
+      // Clear quantities after adding to cart
+      setQuantities({});
+      toast.success(`Added ${calculateTotal().totalQuantity} items to cart!`);
     } catch (error) {
       toast.error('Failed to add items to cart');
     }
@@ -379,10 +394,12 @@ export const SizeChart = ({ productId }) => {
                 {sizeChartData.sizes.map(size => (
                   <td key={size} className="border border-gray-300 p-3 text-center">
                     <input 
-                      type="checkbox" 
-                      className="w-4 h-4 cursor-pointer"
-                      checked={selectedItems[`${color}-${size}`] || false}
-                      onChange={() => handleCheckboxChange(color, size)}
+                      type="number" 
+                      min="0"
+                      className="w-16 h-8 text-center border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={quantities[`${color}-${size}`] || ''}
+                      onChange={(e) => handleQuantityChange(color, size, e.target.value)}
+                      placeholder="0"
                     />
                   </td>
                 ))}
@@ -408,23 +425,42 @@ export const SizeChart = ({ productId }) => {
             </div>
           </div>
 
-          {/* Selection Summary */}
-          {total.count > 0 && (
+          {/* Real-time Calculation Summary */}
+          {total.totalQuantity > 0 && (
             <div className="bg-white p-4 rounded-lg mb-4 border-2 border-blue-300">
-              <h3 className="font-bold text-lg mb-2">Selection Summary:</h3>
-              <div className="flex justify-between items-center">
+              <h3 className="font-bold text-lg mb-2">Order Summary:</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <span className="text-gray-700">Selected: </span>
-                  <span className="font-bold">{total.count} items</span>
-                  <span className="text-sm text-gray-600 ml-2">
-                    ({total.isBulk ? 'Bulk' : 'Regular'} pricing)
-                  </span>
+                  <div className="flex justify-between">
+                    <span>Total Quantity:</span>
+                    <span className="font-bold">{total.totalQuantity} pieces</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Pricing Tier:</span>
+                    <span className={`font-bold ${total.isBulk ? 'text-green-600' : 'text-orange-600'}`}>
+                      {total.isBulk ? 'Bulk Rate' : 'Regular Rate'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Price per piece:</span>
+                    <span className="font-bold">₹{total.pricePerItem}</span>
+                  </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm text-gray-600">₹{total.pricePerItem} per item</div>
-                  <div className="text-xl font-bold text-blue-600">
-                    Total: ₹{total.total}
+                  <div className="text-sm text-gray-600 mb-1">
+                    {total.isBulk ? 
+                      `Bulk rate applied (${total.totalQuantity} ≥ ${total.bulkThreshold})` : 
+                      `Need ${total.bulkThreshold - total.totalQuantity} more for bulk rate`
+                    }
                   </div>
+                  <div className="text-2xl font-bold text-blue-600">
+                    Total: ₹{total.totalPrice}
+                  </div>
+                  {!total.isBulk && total.totalQuantity > 0 && (
+                    <div className="text-sm text-green-600">
+                      Bulk price would be: ₹{total.totalQuantity * total.bulkPrice}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -440,15 +476,35 @@ export const SizeChart = ({ productId }) => {
               </button>
             </div>
             
-            {total.count > 0 && (
+            {total.totalQuantity > 0 && (
               <button
                 onClick={handleAddToCart}
                 className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition-colors font-bold"
               >
-                Add {total.count} items to Cart (₹{total.total})
+                Add {total.totalQuantity} items to Cart (₹{total.totalPrice})
               </button>
             )}
           </div>
+
+          {/* Detailed breakdown */}
+          {total.totalQuantity > 0 && (
+            <div className="mt-4 pt-4 border-t border-yellow-300">
+              <h4 className="font-semibold mb-2">Items breakdown:</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                {Object.entries(quantities).map(([key, qty]) => {
+                  if (qty > 0) {
+                    const [color, size] = key.split('-');
+                    return (
+                      <div key={key} className="bg-gray-100 p-2 rounded">
+                        <span className="font-medium">{color} {size}:</span> {qty} pcs
+                      </div>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
