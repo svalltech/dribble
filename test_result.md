@@ -185,6 +185,9 @@ backend:
       - working: true
         agent: "main"
         comment: "FIXED: Backend order processing endpoints now operational."
+      - working: true
+        agent: "testing"
+        comment: "Order processing is working correctly. Successfully tested order calculation with taxes and shipping. Order creation with address validation is working as expected. Order listing and retrieval for both admin and regular users is properly implemented. Bulk pricing logic is correctly applied for orders with 15+ pieces."
 
   - task: "Category Management"
     implemented: true
