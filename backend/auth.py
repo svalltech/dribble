@@ -54,7 +54,7 @@ async def authenticate_user(db: AsyncIOMotorDatabase, email: str, password: str)
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: AsyncIOMotorDatabase = Depends(lambda: None)  # Will be injected
+    db: AsyncIOMotorDatabase = None
 ) -> Optional[User]:
     """Get current user from JWT token."""
     if not credentials:
@@ -83,15 +83,15 @@ async def get_current_user(
         created_at=user.created_at
     )
 
-def require_auth(user: User = Depends(get_current_user)) -> User:
+def require_auth(current_user: User = Depends(get_current_user)) -> User:
     """Require authentication and return current user."""
-    if not user:
+    if not current_user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return user
+    return current_user
 
 def require_admin(user: User = Depends(require_auth)) -> User:
     """Require admin privileges."""
