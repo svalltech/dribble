@@ -443,15 +443,15 @@ export const ProductInfo = () => {
   );
 };
 
-// Size Chart Component - With inventory management and stock validation
+// Size Chart Component - EXACT compact layout like original website
 export const SizeChart = ({ productId, selectedCategory }) => {
   const { addToCart } = useApp();
   const [sizeChartData, setSizeChartData] = useState({
-    colors: ['Black', 'White', 'Lavender', 'Beige', 'Red', 'Sage Green', 'Brown', 'Maroon', 'Orange', 'Navy'],
+    colors: ['Black', 'White', 'Lavender', 'Beige', 'Red', 'Sage Green', 'Brown', 'Off-white', 'Orange', 'Navy'],
     sizes: ['S', 'M', 'L', 'XL', 'XXL'],
     pricing: {
-      bulk: { quantity: "15pcs", price: "279₹" },
-      regular: { quantity: "15pcs", price: "319₹" }
+      bulk: { quantity: "15pcs", price: "175₹" },
+      regular: { quantity: "15pcs", price: "210₹" }
     }
   });
 
@@ -460,20 +460,17 @@ export const SizeChart = ({ productId, selectedCategory }) => {
   const [inventory, setInventory] = useState({});
 
   useEffect(() => {
-    // Fetch product data based on selected category
     const fetchProductData = async () => {
       try {
         let productToLoad = null;
         
         if (selectedCategory) {
-          // Fetch product by category
           const response = await axios.get(`${API_URL}/products?category=${encodeURIComponent(selectedCategory)}&limit=1`);
           if (response.data && response.data.length > 0) {
             productToLoad = response.data[0];
           }
         }
         
-        // Fallback to first product if no category match
         if (!productToLoad) {
           const response = await axios.get(`${API_URL}/products?limit=1`);
           if (response.data && response.data.length > 0) {
@@ -484,7 +481,6 @@ export const SizeChart = ({ productId, selectedCategory }) => {
         if (productToLoad) {
           setProduct(productToLoad);
           
-          // Build inventory map from product variants
           const inventoryMap = {};
           if (productToLoad.variants) {
             productToLoad.variants.forEach(variant => {
@@ -494,7 +490,6 @@ export const SizeChart = ({ productId, selectedCategory }) => {
           }
           setInventory(inventoryMap);
           
-          // Fetch size chart data
           try {
             const sizeChartResponse = await axios.get(`${API_URL}/products/${productToLoad.id}/sizechart`);
             setSizeChartData(sizeChartResponse.data);
@@ -502,22 +497,19 @@ export const SizeChart = ({ productId, selectedCategory }) => {
             console.log('Using default size chart data');
           }
         } else {
-          // Create fallback product for demo
           const fallbackProduct = {
             id: 'demo-product-1',
-            name: selectedCategory || 'Oversized Drop-shoulder, 210gsm, Terry cotton/Longjohit Heavy Gauge, 100% Cotton',
+            name: selectedCategory || 'Oversized Drop-shoulder, 210gsm, Terry cotton/Loopknit Heavy Gauge, 100% Cotton',
             category: selectedCategory || 'Oversize 210gsm',
-            base_price: 319,
-            bulk_price: 279,
+            base_price: 210,
+            bulk_price: 175,
             variants: []
           };
           
-          // Generate random inventory for demo
           const demoInventory = {};
           sizeChartData.colors.forEach(color => {
             sizeChartData.sizes.forEach(size => {
               const key = `${color}-${size}`;
-              // Randomly assign 0-50 pieces (10% chance of 0 stock)
               demoInventory[key] = Math.random() < 0.1 ? 0 : Math.floor(Math.random() * 50) + 1;
             });
           });
@@ -527,7 +519,6 @@ export const SizeChart = ({ productId, selectedCategory }) => {
         }
       } catch (error) {
         console.error('Error fetching product data:', error);
-        // Create demo inventory even on error
         const demoInventory = {};
         sizeChartData.colors.forEach(color => {
           sizeChartData.sizes.forEach(size => {
@@ -540,7 +531,6 @@ export const SizeChart = ({ productId, selectedCategory }) => {
     };
     
     fetchProductData();
-    // Clear quantities when switching products
     setQuantities({});
   }, [productId, selectedCategory]);
 
@@ -549,7 +539,6 @@ export const SizeChart = ({ productId, selectedCategory }) => {
     const numQuantity = parseInt(quantity) || 0;
     const availableStock = inventory[key] || 0;
     
-    // Don't allow quantities greater than available stock
     if (numQuantity > availableStock) {
       toast.error(`Only ${availableStock} pieces available for ${color} ${size}`);
       return;
@@ -566,7 +555,6 @@ export const SizeChart = ({ productId, selectedCategory }) => {
     });
   };
 
-  // Calculate total quantity and pricing
   const calculateTotal = () => {
     const totalQuantity = Object.values(quantities).reduce((sum, qty) => sum + qty, 0);
     if (totalQuantity === 0) return { totalQuantity: 0, totalPrice: 0, isBulk: false, pricePerItem: 0 };
@@ -625,60 +613,57 @@ export const SizeChart = ({ productId, selectedCategory }) => {
   const total = calculateTotal();
 
   return (
-    <div className="container mx-auto p-4">
-      {/* Product Title */}
-      {product && (
-        <div className="bg-blue-50 p-3 rounded-lg mb-4">
-          <h3 className="text-lg font-bold text-blue-800">
-            Current Product: {product.name}
-          </h3>
-          <p className="text-sm text-blue-600">Category: {product.category}</p>
-        </div>
-      )}
+    <div className="container mx-auto px-4 py-2">
+      {/* Product Description - EXACT like original */}
+      <div className="bg-yellow-100 p-3 text-center mb-1">
+        <h2 className="text-lg font-bold text-black">
+          {product ? product.name : 'Oversized Drop-shoulder, 210gsm, Terry cotton/Loopknit Heavy Gauge, 100% Cotton'}
+        </h2>
+        <p className="text-sm text-gray-700">Supercombed Premium Quality Red Lable Fabric</p>
+      </div>
       
-      <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-        <table className="w-full border-collapse">
+      {/* Size Chart Table - COMPACT DESIGN */}
+      <div className="bg-white border border-gray-300">
+        <table className="w-full" style={{borderCollapse: 'collapse'}}>
           <thead>
             <tr className="bg-blue-500 text-white">
-              <th className="border border-gray-300 p-3 text-left font-bold">
+              <th className="border border-gray-300 py-2 px-3 text-left font-bold text-sm">
                 {sizeChartData.chart_code || 'OS210'}
               </th>
               {sizeChartData.sizes.map(size => (
-                <th key={size} className="border border-gray-300 p-3 text-center font-bold">{size}</th>
+                <th key={size} className="border border-gray-300 py-2 px-3 text-center font-bold text-sm bg-red-500">
+                  {size}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
             {sizeChartData.colors.map((color, index) => (
-              <tr key={color} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                <td className="border border-gray-300 p-3 font-semibold text-center">{color}</td>
+              <tr key={color}>
+                <td className="border border-gray-300 py-1 px-3 font-semibold text-center text-sm bg-gray-50">
+                  {color}
+                </td>
                 {sizeChartData.sizes.map(size => {
                   const key = `${color}-${size}`;
                   const stockQuantity = inventory[key] || 0;
                   const isOutOfStock = stockQuantity === 0;
                   
                   return (
-                    <td key={size} className="border border-gray-300 p-3 text-center relative">
+                    <td key={size} className="border border-gray-300 p-1 text-center">
                       {isOutOfStock ? (
-                        <div className="w-16 h-8 bg-red-100 border-2 border-red-300 rounded flex items-center justify-center">
+                        <div className="w-full h-8 flex items-center justify-center">
                           <span className="text-red-600 font-bold text-lg">✕</span>
                         </div>
                       ) : (
-                        <>
-                          <input 
-                            type="number" 
-                            min="0"
-                            max={stockQuantity}
-                            className="w-16 h-8 text-center border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={quantities[key] || ''}
-                            onChange={(e) => handleQuantityChange(color, size, e.target.value)}
-                            placeholder="0"
-                            title={`Stock: ${stockQuantity} pieces`}
-                          />
-                          <div className="text-xs text-gray-500 mt-1">
-                            Stock: {stockQuantity}
-                          </div>
-                        </>
+                        <input 
+                          type="number" 
+                          min="0"
+                          max={stockQuantity}
+                          className="w-full h-8 text-center border-0 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                          value={quantities[key] || ''}
+                          onChange={(e) => handleQuantityChange(color, size, e.target.value)}
+                          placeholder=""
+                        />
                       )}
                     </td>
                   );
@@ -688,107 +673,83 @@ export const SizeChart = ({ productId, selectedCategory }) => {
           </tbody>
         </table>
         
-        <div className="bg-yellow-200 p-4 border-t">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <span className="font-bold text-lg">Size</span>
-            </div>
-            <div className="flex gap-8">
-              <div className="text-center">
-                <div className="font-bold">More than {sizeChartData.pricing.bulk.quantity}</div>
-                <div className="text-lg font-bold text-green-600">{sizeChartData.pricing.bulk.price}</div>
-              </div>
-              <div className="text-center">
-                <div className="font-bold">Less than {sizeChartData.pricing.regular.quantity}</div>
-                <div className="text-lg font-bold text-red-600">{sizeChartData.pricing.regular.price}</div>
-              </div>
-            </div>
-          </div>
+        {/* Pricing Section - EXACT like original */}
+        <div className="bg-yellow-200 border-t border-gray-300">
+          <table className="w-full" style={{borderCollapse: 'collapse'}}>
+            <tbody>
+              <tr>
+                <td className="border border-gray-300 py-2 px-3 font-bold text-center">Size</td>
+                <td className="border border-gray-300 py-2 px-3 font-bold text-center">More than 15pcs</td>
+                <td className="border border-gray-300 py-2 px-3 font-bold text-center">Less than 15pcs</td>
+              </tr>
+              <tr>
+                <td className="border border-gray-300 py-2 px-3 font-bold text-center">S to XXL</td>
+                <td className="border border-gray-300 py-2 px-3 font-bold text-center text-green-600">
+                  {sizeChartData.pricing.bulk.price}
+                </td>
+                <td className="border border-gray-300 py-2 px-3 font-bold text-center text-red-600">
+                  {sizeChartData.pricing.regular.price}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-          {/* Real-time Calculation Summary */}
-          {total.totalQuantity > 0 && (
-            <div className="bg-white p-4 rounded-lg mb-4 border-2 border-blue-300">
-              <h3 className="font-bold text-lg mb-2">Order Summary:</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <div className="flex justify-between">
-                    <span>Total Quantity:</span>
-                    <span className="font-bold">{total.totalQuantity} pieces</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Pricing Tier:</span>
-                    <span className={`font-bold ${total.isBulk ? 'text-green-600' : 'text-orange-600'}`}>
-                      {total.isBulk ? 'Bulk Rate' : 'Regular Rate'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Price per piece:</span>
-                    <span className="font-bold">₹{total.pricePerItem}</span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm text-gray-600 mb-1">
-                    {total.isBulk ? 
-                      `Bulk rate applied (${total.totalQuantity} ≥ ${total.bulkThreshold})` : 
-                      `Need ${total.bulkThreshold - total.totalQuantity} more for bulk rate`
-                    }
-                  </div>
-                  <div className="text-2xl font-bold text-blue-600">
-                    Total: ₹{total.totalPrice}
-                  </div>
-                  {!total.isBulk && total.totalQuantity > 0 && (
-                    <div className="text-sm text-green-600">
-                      Bulk price would be: ₹{total.totalQuantity * total.bulkPrice}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-          
-          <div className="flex justify-between items-center">
-            <div className="flex gap-2">
-              <button className="bg-purple-600 text-white px-6 py-2 rounded hover:bg-purple-700 transition-colors">
-                Product
-              </button>
-              <button className="bg-gray-600 text-white px-6 py-2 rounded hover:bg-gray-700 transition-colors">
-                Live/Cart
-              </button>
-            </div>
-            
-            {total.totalQuantity > 0 && (
-              <button
-                onClick={handleAddToCart}
-                className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition-colors font-bold"
-              >
-                Add {total.totalQuantity} items to Cart (₹{total.totalPrice})
-              </button>
-            )}
-          </div>
-
-          {/* Detailed breakdown */}
-          {total.totalQuantity > 0 && (
-            <div className="mt-4 pt-4 border-t border-yellow-300">
-              <h4 className="font-semibold mb-2">Items breakdown:</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                {Object.entries(quantities).map(([key, qty]) => {
-                  if (qty > 0) {
-                    const [color, size] = key.split('-');
-                    const stockAvailable = inventory[key] || 0;
-                    return (
-                      <div key={key} className="bg-gray-100 p-2 rounded">
-                        <span className="font-medium">{color} {size}:</span> {qty} pcs
-                        <div className="text-xs text-gray-500">Available: {stockAvailable}</div>
-                      </div>
-                    );
-                  }
-                  return null;
-                })}
-              </div>
-            </div>
-          )}
+        {/* Action Buttons */}
+        <div className="bg-purple-100 p-2 text-center border-t border-gray-300">
+          <button className="bg-purple-600 text-white px-4 py-1 text-sm font-semibold hover:bg-purple-700 transition-colors mr-2">
+            Photos
+          </button>
+          <button className="bg-purple-600 text-white px-4 py-1 text-sm font-semibold hover:bg-purple-700 transition-colors">
+            SizeChart
+          </button>
         </div>
       </div>
+
+      {/* Order Summary - Show only when items selected */}
+      {total.totalQuantity > 0 && (
+        <div className="bg-blue-50 p-4 rounded-lg mt-4 border border-blue-200">
+          <h3 className="font-bold text-lg mb-2">Order Summary:</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <div className="flex justify-between">
+                <span>Total Quantity:</span>
+                <span className="font-bold">{total.totalQuantity} pieces</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Pricing Tier:</span>
+                <span className={`font-bold ${total.isBulk ? 'text-green-600' : 'text-orange-600'}`}>
+                  {total.isBulk ? 'Bulk Rate' : 'Regular Rate'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Price per piece:</span>
+                <span className="font-bold">₹{total.pricePerItem}</span>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-gray-600 mb-1">
+                {total.isBulk ? 
+                  `Bulk rate applied (${total.totalQuantity} ≥ ${total.bulkThreshold})` : 
+                  `Need ${total.bulkThreshold - total.totalQuantity} more for bulk rate`
+                }
+              </div>
+              <div className="text-2xl font-bold text-blue-600">
+                Total: ₹{total.totalPrice}
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-4 text-center">
+            <button
+              onClick={handleAddToCart}
+              className="bg-green-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-green-700 transition-colors"
+            >
+              Add {total.totalQuantity} items to Cart (₹{total.totalPrice})
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
