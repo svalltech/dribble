@@ -345,8 +345,8 @@ export const LoginModal = ({ onClose }) => {
   );
 };
 
-// Navigation Component - EXACT replica with dynamic product switching
-export const Navigation = ({ onCategorySelect }) => {
+// Navigation Component - EXACT replica with highlighting and proper layout
+export const Navigation = ({ onCategorySelect, selectedCategory }) => {
   const [categories, setCategories] = useState([]);
 
   useEffect(() => {
@@ -356,27 +356,27 @@ export const Navigation = ({ onCategorySelect }) => {
         setCategories(response.data);
       } catch (error) {
         console.error('Error fetching categories:', error);
-        // Fallback to default categories if API fails
+        // Fallback to default categories with exact original names
         setCategories([
           { id: 1, name: "Oversize 210gsm", color: "bg-red-500" },
           { id: 2, name: "Oversize 240gsm", color: "bg-orange-500" },
-          { id: 3, name: "Kids Kneck", color: "bg-yellow-500" },
-          { id: 4, name: "Oversize 190gsm", color: "bg-green-500" },
-          { id: 5, name: "Tue Bio Kneck", color: "bg-blue-500" },
-          { id: 6, name: "Bio Kneck", color: "bg-purple-500" },
-          { id: 7, name: "Polo Shirts", color: "bg-pink-500" },
-          { id: 8, name: "Sublimation", color: "bg-indigo-500" },
+          { id: 3, name: "Kids Rneck", color: "bg-yellow-500" },
+          { id: 4, name: "Oversize 180gsm", color: "bg-green-500" },
+          { id: 5, name: "True Bio Rneck", color: "bg-blue-500" },
+          { id: 6, name: "Bio Rneck", color: "bg-purple-500" },
+          { id: 7, name: "Non Bio Rneck", color: "bg-pink-500" },
+          { id: 8, name: "Sublimation tshirt", color: "bg-indigo-500" },
           { id: 9, name: "Premium Polo", color: "bg-red-600" },
           { id: 10, name: "Cotton Polo", color: "bg-orange-600" },
-          { id: 11, name: "Hoodie 320gsm", color: "bg-yellow-600" },
-          { id: 12, name: "Hoodie 270gsm", color: "bg-green-600" },
+          { id: 11, name: "Hoodie 320gsm-1", color: "bg-yellow-600" },
+          { id: 12, name: "Hoodie 320gsm-2", color: "bg-green-600" },
           { id: 13, name: "Sweatshirt", color: "bg-blue-600" },
           { id: 14, name: "Varsity", color: "bg-purple-600" },
-          { id: 15, name: "Dropship Hoodie 430gsm", color: "bg-pink-600" },
+          { id: 15, name: "Dropsho Hoodie 430gsm", color: "bg-pink-600" },
           { id: 16, name: "Shorts", color: "bg-indigo-600" },
           { id: 17, name: "Gym vest", color: "bg-red-700" },
-          { id: 18, name: "Activework OS", color: "bg-orange-700" },
-          { id: 19, name: "Activework BF", color: "bg-yellow-700" }
+          { id: 18, name: "AcidWash OS", color: "bg-orange-700" },
+          { id: 19, name: "AcidWash RF", color: "bg-yellow-700" }
         ]);
       }
     };
@@ -390,24 +390,32 @@ export const Navigation = ({ onCategorySelect }) => {
   };
 
   return (
-    <div className="bg-gray-100 p-2">
+    <div className="bg-gray-100 px-4 py-2">
       <div className="container mx-auto">
         <div className="flex flex-wrap gap-1 justify-center">
-          {categories.map((category, index) => (
-            <button
-              key={category.id || index}
-              onClick={() => handleCategoryClick(category)}
-              className={`${category.color || 'bg-gray-500'} text-white px-3 py-1 text-xs rounded hover:opacity-80 transition-opacity focus:ring-2 focus:ring-white`}
-            >
-              {category.name}
-            </button>
-          ))}
+          {categories.map((category, index) => {
+            const isSelected = selectedCategory === category.name;
+            return (
+              <button
+                key={category.id || index}
+                onClick={() => handleCategoryClick(category)}
+                className={`px-3 py-1 text-xs font-semibold transition-all ${
+                  isSelected 
+                    ? 'bg-purple-600 text-white' 
+                    : `${category.color || 'bg-gray-500'} text-white hover:opacity-80`
+                }`}
+              >
+                {category.name}
+              </button>
+            );
+          })}
         </div>
-        <div className="text-center mt-2">
-          <button className="bg-green-600 text-white px-6 py-2 rounded font-semibold hover:bg-green-700 transition-colors">
-            Plugins available
-          </button>
-          <span className="ml-2 text-sm text-gray-600">Add to cart</span>
+        
+        {/* Right side buttons - exactly like original */}
+        <div className="flex justify-end mt-2 gap-2">
+          <button className="bg-blue-600 text-white px-3 py-1 text-xs rounded">#Photos</button>
+          <button className="bg-purple-600 text-white px-3 py-1 text-xs rounded">#SizeChart</button>
+          <button className="bg-green-600 text-white px-3 py-1 text-xs rounded">Add to cart</button>
         </div>
       </div>
     </div>
