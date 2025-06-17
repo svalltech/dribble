@@ -242,8 +242,8 @@ export const ProductInfo = () => {
   );
 };
 
-// Size Chart Component - EXACT replica with quantity inputs and cart functionality
-export const SizeChart = ({ productId }) => {
+// Size Chart Component - With inventory management and stock validation
+export const SizeChart = ({ productId, selectedCategory }) => {
   const { addToCart } = useApp();
   const [sizeChartData, setSizeChartData] = useState({
     colors: ['Black', 'White', 'Lavender', 'Beige', 'Red', 'Sage Green', 'Brown', 'Maroon', 'Orange', 'Navy'],
@@ -256,58 +256,103 @@ export const SizeChart = ({ productId }) => {
 
   const [quantities, setQuantities] = useState({});
   const [product, setProduct] = useState(null);
+  const [inventory, setInventory] = useState({});
 
   useEffect(() => {
-    // Fetch size chart data and product details
-    const fetchData = async () => {
+    // Fetch product data based on selected category
+    const fetchProductData = async () => {
       try {
-        // Fetch size chart data for specific product
-        if (productId) {
-          try {
-            const response = await axios.get(`${API_URL}/products/${productId}/sizechart`);
-            setSizeChartData(response.data);
-          } catch (error) {
-            console.log('Size chart API not available, using defaults');
-          }
-          
-          // Fetch the specific product details
-          const productResponse = await axios.get(`${API_URL}/products/${productId}`);
-          setProduct(productResponse.data);
-        } else {
-          // If no productId provided, fetch the first available product
-          const productsResponse = await axios.get(`${API_URL}/products?limit=1`);
-          if (productsResponse.data && productsResponse.data.length > 0) {
-            const firstProduct = productsResponse.data[0];
-            setProduct(firstProduct);
-            
-            // Try to fetch size chart for this product
-            try {
-              const sizeChartResponse = await axios.get(`${API_URL}/products/${firstProduct.id}/sizechart`);
-              setSizeChartData(sizeChartResponse.data);
-            } catch (error) {
-              console.log('Size chart API not available, using defaults');
-            }
+        let productToLoad = null;
+        
+        if (selectedCategory) {
+          // Fetch product by category
+          const response = await axios.get(`${API_URL}/products?category=${encodeURIComponent(selectedCategory)}&limit=1`);
+          if (response.data && response.data.length > 0) {
+            productToLoad = response.data[0];
           }
         }
+        
+        // Fallback to first product if no category match
+        if (!productToLoad) {
+          const response = await axios.get(`${API_URL}/products?limit=1`);
+          if (response.data && response.data.length > 0) {
+            productToLoad = response.data[0];
+          }
+        }
+
+        if (productToLoad) {
+          setProduct(productToLoad);
+          
+          // Build inventory map from product variants
+          const inventoryMap = {};
+          if (productToLoad.variants) {
+            productToLoad.variants.forEach(variant => {
+              const key = `${variant.color}-${variant.size}`;
+              inventoryMap[key] = variant.stock_quantity || 0;
+            });
+          }
+          setInventory(inventoryMap);
+          
+          // Fetch size chart data
+          try {
+            const sizeChartResponse = await axios.get(`${API_URL}/products/${productToLoad.id}/sizechart`);
+            setSizeChartData(sizeChartResponse.data);
+          } catch (error) {
+            console.log('Using default size chart data');
+          }
+        } else {
+          // Create fallback product for demo
+          const fallbackProduct = {
+            id: 'demo-product-1',
+            name: selectedCategory || 'Oversized Drop-shoulder, 210gsm, Terry cotton/Longjohit Heavy Gauge, 100% Cotton',
+            category: selectedCategory || 'Oversize 210gsm',
+            base_price: 319,
+            bulk_price: 279,
+            variants: []
+          };
+          
+          // Generate random inventory for demo
+          const demoInventory = {};
+          sizeChartData.colors.forEach(color => {
+            sizeChartData.sizes.forEach(size => {
+              const key = `${color}-${size}`;
+              // Randomly assign 0-50 pieces (10% chance of 0 stock)
+              demoInventory[key] = Math.random() < 0.1 ? 0 : Math.floor(Math.random() * 50) + 1;
+            });
+          });
+          
+          setProduct(fallbackProduct);
+          setInventory(demoInventory);
+        }
       } catch (error) {
-        console.error('Error fetching data:', error);
-        // Create a fallback product for demo purposes
-        setProduct({
-          id: 'demo-product-1',
-          name: 'Oversized Drop-shoulder, 210gsm, Terry cotton/Longjohit Heavy Gauge, 100% Cotton',
-          category: 'Oversize 210gsm',
-          base_price: 319,
-          bulk_price: 279
+        console.error('Error fetching product data:', error);
+        // Create demo inventory even on error
+        const demoInventory = {};
+        sizeChartData.colors.forEach(color => {
+          sizeChartData.sizes.forEach(size => {
+            const key = `${color}-${size}`;
+            demoInventory[key] = Math.random() < 0.1 ? 0 : Math.floor(Math.random() * 50) + 1;
+          });
         });
+        setInventory(demoInventory);
       }
     };
     
-    fetchData();
-  }, [productId]);
+    fetchProductData();
+    // Clear quantities when switching products
+    setQuantities({});
+  }, [productId, selectedCategory]);
 
   const handleQuantityChange = (color, size, quantity) => {
     const key = `${color}-${size}`;
     const numQuantity = parseInt(quantity) || 0;
+    const availableStock = inventory[key] || 0;
+    
+    // Don't allow quantities greater than available stock
+    if (numQuantity > availableStock) {
+      toast.error(`Only ${availableStock} pieces available for ${color} ${size}`);
+      return;
+    }
     
     setQuantities(prev => {
       const updated = { ...prev };
@@ -325,7 +370,6 @@ export const SizeChart = ({ productId }) => {
     const totalQuantity = Object.values(quantities).reduce((sum, qty) => sum + qty, 0);
     if (totalQuantity === 0) return { totalQuantity: 0, totalPrice: 0, isBulk: false, pricePerItem: 0 };
     
-    // Extract pricing from the configured data
     const bulkThreshold = parseInt(sizeChartData.pricing.bulk.quantity.replace(/[^\d]/g, ''));
     const isBulk = totalQuantity >= bulkThreshold;
     
@@ -359,15 +403,19 @@ export const SizeChart = ({ productId }) => {
     }
 
     try {
-      // Add each selected combination to cart with specified quantities
+      let totalAdded = 0;
       for (const [key, quantity] of quantityEntries) {
         const [color, size] = key.split('-');
-        await addToCart(product.id, color, size, quantity);
+        const success = await addToCart(product.id, color, size, quantity);
+        if (success) {
+          totalAdded += quantity;
+        }
       }
       
-      // Clear quantities after adding to cart
-      setQuantities({});
-      toast.success(`Added ${calculateTotal().totalQuantity} items to cart!`);
+      if (totalAdded > 0) {
+        setQuantities({});
+        toast.success(`Added ${totalAdded} items to cart!`);
+      }
     } catch (error) {
       toast.error('Failed to add items to cart');
     }
@@ -377,11 +425,23 @@ export const SizeChart = ({ productId }) => {
 
   return (
     <div className="container mx-auto p-4">
+      {/* Product Title */}
+      {product && (
+        <div className="bg-blue-50 p-3 rounded-lg mb-4">
+          <h3 className="text-lg font-bold text-blue-800">
+            Current Product: {product.name}
+          </h3>
+          <p className="text-sm text-blue-600">Category: {product.category}</p>
+        </div>
+      )}
+      
       <div className="bg-white rounded-lg shadow-lg overflow-hidden">
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-blue-500 text-white">
-              <th className="border border-gray-300 p-3 text-left font-bold">OS210</th>
+              <th className="border border-gray-300 p-3 text-left font-bold">
+                {sizeChartData.chart_code || 'OS210'}
+              </th>
               {sizeChartData.sizes.map(size => (
                 <th key={size} className="border border-gray-300 p-3 text-center font-bold">{size}</th>
               ))}
@@ -391,18 +451,37 @@ export const SizeChart = ({ productId }) => {
             {sizeChartData.colors.map((color, index) => (
               <tr key={color} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                 <td className="border border-gray-300 p-3 font-semibold text-center">{color}</td>
-                {sizeChartData.sizes.map(size => (
-                  <td key={size} className="border border-gray-300 p-3 text-center">
-                    <input 
-                      type="number" 
-                      min="0"
-                      className="w-16 h-8 text-center border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={quantities[`${color}-${size}`] || ''}
-                      onChange={(e) => handleQuantityChange(color, size, e.target.value)}
-                      placeholder="0"
-                    />
-                  </td>
-                ))}
+                {sizeChartData.sizes.map(size => {
+                  const key = `${color}-${size}`;
+                  const stockQuantity = inventory[key] || 0;
+                  const isOutOfStock = stockQuantity === 0;
+                  
+                  return (
+                    <td key={size} className="border border-gray-300 p-3 text-center relative">
+                      {isOutOfStock ? (
+                        <div className="w-16 h-8 bg-red-100 border-2 border-red-300 rounded flex items-center justify-center">
+                          <span className="text-red-600 font-bold text-lg">✕</span>
+                        </div>
+                      ) : (
+                        <>
+                          <input 
+                            type="number" 
+                            min="0"
+                            max={stockQuantity}
+                            className="w-16 h-8 text-center border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            value={quantities[key] || ''}
+                            onChange={(e) => handleQuantityChange(color, size, e.target.value)}
+                            placeholder="0"
+                            title={`Stock: ${stockQuantity} pieces`}
+                          />
+                          <div className="text-xs text-gray-500 mt-1">
+                            Stock: {stockQuantity}
+                          </div>
+                        </>
+                      )}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>
@@ -494,9 +573,11 @@ export const SizeChart = ({ productId }) => {
                 {Object.entries(quantities).map(([key, qty]) => {
                   if (qty > 0) {
                     const [color, size] = key.split('-');
+                    const stockAvailable = inventory[key] || 0;
                     return (
                       <div key={key} className="bg-gray-100 p-2 rounded">
                         <span className="font-medium">{color} {size}:</span> {qty} pcs
+                        <div className="text-xs text-gray-500">Available: {stockAvailable}</div>
                       </div>
                     );
                   }
