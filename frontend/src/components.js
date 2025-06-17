@@ -122,30 +122,223 @@ export const useApp = () => {
   return context;
 };
 
-// Header Component - EXACT replica of original
+// Header Component - EXACT replica with cart counter and menu
 export const Header = () => {
-  const [currentQuantity, setCurrentQuantity] = useState("2,56,352");
+  const { cart } = useApp();
+  const [showMenu, setShowMenu] = useState(false);
+  const [currentQuantity, setCurrentQuantity] = useState("2,86,352");
   
+  const totalItems = cart.items ? cart.items.reduce((sum, item) => sum + item.quantity, 0) : 0;
+  const cartTotal = cart.total || 0;
+
   return (
-    <div className="bg-yellow-300 p-4">
-      <div className="container mx-auto">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-black">DRIBBLE</h1>
-          <p className="text-sm text-gray-700">bulk t-shirts for Brands & Agency</p>
-          <div className="mt-2">
-            <span className="text-sm text-gray-700">~ {currentQuantity} pcs sold in previous month ~</span>
+    <>
+      <div className="bg-yellow-300 p-4 relative">
+        <div className="container mx-auto">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-black">DRIBBLE</h1>
+            <p className="text-sm text-gray-700">bulk t-shirts for Brands & Agency</p>
+            <div className="mt-2">
+              <span className="text-sm text-gray-700">~ {currentQuantity} pcs sold in previous month ~</span>
+            </div>
+            <div className="flex justify-center gap-4 mt-3">
+              <button className="bg-orange-500 text-white px-4 py-2 rounded font-semibold hover:bg-orange-600 transition-colors">
+                Pricing
+              </button>
+              <button className="bg-green-500 text-white px-4 py-2 rounded font-semibold hover:bg-green-600 transition-colors relative">
+                🛒 Cart
+                {totalItems > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {totalItems}
+                  </span>
+                )}
+              </button>
+              <button className="bg-blue-500 text-white px-4 py-2 rounded font-semibold hover:bg-blue-600 transition-colors">
+                Order Now
+              </button>
+            </div>
           </div>
-          <div className="flex justify-center gap-4 mt-3">
-            <button className="bg-orange-500 text-white px-4 py-2 rounded font-semibold hover:bg-orange-600 transition-colors">
-              Pricing
-            </button>
-            <button className="bg-green-500 text-white px-4 py-2 rounded font-semibold hover:bg-green-600 transition-colors">
-              🛒 Cart
-            </button>
-            <button className="bg-blue-500 text-white px-4 py-2 rounded font-semibold hover:bg-blue-600 transition-colors">
-              Order Now
-            </button>
+          
+          {/* Hamburger Menu Button */}
+          <button 
+            onClick={() => setShowMenu(!showMenu)}
+            className="absolute top-4 left-4 bg-gray-600 text-white p-2 rounded hover:bg-gray-700 transition-colors"
+          >
+            <div className="grid grid-cols-3 gap-1 w-4 h-4">
+              <div className="w-1 h-1 bg-white rounded"></div>
+              <div className="w-1 h-1 bg-white rounded"></div>
+              <div className="w-1 h-1 bg-white rounded"></div>
+              <div className="w-1 h-1 bg-white rounded"></div>
+              <div className="w-1 h-1 bg-white rounded"></div>
+              <div className="w-1 h-1 bg-white rounded"></div>
+              <div className="w-1 h-1 bg-white rounded"></div>
+              <div className="w-1 h-1 bg-white rounded"></div>
+              <div className="w-1 h-1 bg-white rounded"></div>
+            </div>
+          </button>
+        </div>
+      </div>
+      
+      {/* Side Menu Overlay */}
+      {showMenu && <SideMenu onClose={() => setShowMenu(false)} />}
+    </>
+  );
+};
+
+// Side Menu Component - EXACT replica of the popup menu
+export const SideMenu = ({ onClose }) => {
+  const { user, login, logout } = useApp();
+  const [showLogin, setShowLogin] = useState(false);
+
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      <div className="fixed inset-0 bg-black bg-opacity-50" onClick={onClose}></div>
+      <div className="w-80 bg-slate-600 h-full shadow-xl relative text-white">
+        <button 
+          onClick={onClose}
+          className="absolute top-4 right-4 bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600"
+        >
+          Close
+        </button>
+        
+        <div className="p-6 pt-16">
+          {/* User Section */}
+          <div className="flex items-center mb-6">
+            <div className="w-16 h-16 bg-slate-500 rounded-full flex items-center justify-center mr-4">
+              <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"></path>
+              </svg>
+            </div>
+            <div>
+              {user ? (
+                <div>
+                  <p className="font-semibold">{user.full_name}</p>
+                  <button onClick={logout} className="text-sm text-gray-300 hover:text-white">Logout</button>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => setShowLogin(true)}
+                  className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition-colors"
+                >
+                  Login
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* Menu Items */}
+          <div className="space-y-1">
+            <div className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer">Delivery Details</div>
+            <div className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer">Orders/Bills/Tracking</div>
+            <div className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer">Shipping Calculator</div>
+            <div className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer flex items-center">
+              Live Stock <span className="ml-2 w-2 h-2 bg-green-400 rounded-full"></span>
+            </div>
+            <div className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer">Pricing</div>
+            <div className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer">Videos</div>
+            <div className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer">Suggestions</div>
+            <div className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer">Contact us</div>
+            <div className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer">About us</div>
+            <div className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer">FAQ</div>
+          </div>
+
+          {/* Weather */}
+          <div className="mt-8 flex items-center text-orange-400">
+            <span className="text-2xl mr-2">☀️</span>
+            <span>30°C</span>
+          </div>
+        </div>
+      </div>
+      
+      {/* Login Modal */}
+      {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
+    </div>
+  );
+};
+
+// Login Modal Component
+export const LoginModal = ({ onClose }) => {
+  const { login, register } = useApp();
+  const [isLogin, setIsLogin] = useState(true);
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    full_name: '',
+    phone: ''
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const success = isLogin 
+      ? await login(formData.email, formData.password)
+      : await register(formData);
+    
+    if (success) {
+      onClose();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-60">
+      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold">{isLogin ? 'Login' : 'Register'}</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">✕</button>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {!isLogin && (
+            <>
+              <input
+                type="text"
+                placeholder="Full Name"
+                value={formData.full_name}
+                onChange={(e) => setFormData({...formData, full_name: e.target.value})}
+                className="w-full px-3 py-2 border rounded-lg"
+                required
+              />
+              <input
+                type="tel"
+                placeholder="Phone Number"
+                value={formData.phone}
+                onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                className="w-full px-3 py-2 border rounded-lg"
+              />
+            </>
+          )}
+          
+          <input
+            type="email"
+            placeholder="Email"
+            value={formData.email}
+            onChange={(e) => setFormData({...formData, email: e.target.value})}
+            className="w-full px-3 py-2 border rounded-lg"
+            required
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={formData.password}
+            onChange={(e) => setFormData({...formData, password: e.target.value})}
+            className="w-full px-3 py-2 border rounded-lg"
+            required
+          />
+          
+          <button
+            type="submit"
+            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            {isLogin ? 'Login' : 'Register'}
+          </button>
+        </form>
+        
+        <div className="mt-4 text-center">
+          <button
+            onClick={() => setIsLogin(!isLogin)}
+            className="text-blue-600 hover:underline"
+          >
+            {isLogin ? 'Need an account? Register' : 'Have an account? Login'}
+          </button>
         </div>
       </div>
     </div>
