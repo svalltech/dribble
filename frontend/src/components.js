@@ -200,8 +200,9 @@ export const ProductInfo = () => {
   );
 };
 
-// Size Chart Component - EXACT replica with editable options
+// Size Chart Component - EXACT replica with working cart functionality
 export const SizeChart = ({ productId }) => {
+  const { addToCart } = useApp();
   const [sizeChartData, setSizeChartData] = useState({
     colors: ['Black', 'White', 'Lavender', 'Beige', 'Red', 'Sage Green', 'Brown', 'Maroon', 'Orange', 'Navy'],
     sizes: ['S', 'M', 'L', 'XL', 'XXL'],
@@ -212,6 +213,7 @@ export const SizeChart = ({ productId }) => {
   });
 
   const [selectedItems, setSelectedItems] = useState({});
+  const [product, setProduct] = useState(null);
 
   useEffect(() => {
     // Fetch size chart data for specific product
@@ -220,6 +222,12 @@ export const SizeChart = ({ productId }) => {
         if (productId) {
           const response = await axios.get(`${API_URL}/products/${productId}/sizechart`);
           setSizeChartData(response.data);
+        }
+        
+        // Also fetch product details for cart operations
+        const productResponse = await axios.get(`${API_URL}/products`);
+        if (productResponse.data && productResponse.data.length > 0) {
+          setProduct(productResponse.data[0]); // Use first product for demo
         }
       } catch (error) {
         console.error('Error fetching size chart:', error);
@@ -235,6 +243,53 @@ export const SizeChart = ({ productId }) => {
       [key]: !prev[key]
     }));
   };
+
+  // Calculate total selected items and pricing
+  const calculateTotal = () => {
+    const selectedCount = Object.values(selectedItems).filter(Boolean).length;
+    if (selectedCount === 0) return { count: 0, total: 0, isBulk: false };
+    
+    const isBulk = selectedCount >= parseInt(sizeChartData.pricing.bulk.quantity.replace('pcs', ''));
+    const pricePerItem = isBulk ? 
+      parseFloat(sizeChartData.pricing.bulk.price.replace('₹', '')) : 
+      parseFloat(sizeChartData.pricing.regular.price.replace('₹', ''));
+    
+    return {
+      count: selectedCount,
+      total: selectedCount * pricePerItem,
+      isBulk,
+      pricePerItem
+    };
+  };
+
+  const handleAddToCart = async () => {
+    if (!product) {
+      toast.error('Product not loaded');
+      return;
+    }
+
+    const selectedKeys = Object.keys(selectedItems).filter(key => selectedItems[key]);
+    if (selectedKeys.length === 0) {
+      toast.error('Please select at least one size and color combination');
+      return;
+    }
+
+    try {
+      // Add each selected combination to cart
+      for (const key of selectedKeys) {
+        const [color, size] = key.split('-');
+        await addToCart(product.id, color, size, 1);
+      }
+      
+      // Clear selections after adding to cart
+      setSelectedItems({});
+      toast.success(`Added ${selectedKeys.length} items to cart!`);
+    } catch (error) {
+      toast.error('Failed to add items to cart');
+    }
+  };
+
+  const total = calculateTotal();
 
   return (
     <div className="container mx-auto p-4">
@@ -256,7 +311,7 @@ export const SizeChart = ({ productId }) => {
                   <td key={size} className="border border-gray-300 p-3 text-center">
                     <input 
                       type="checkbox" 
-                      className="w-4 h-4"
+                      className="w-4 h-4 cursor-pointer"
                       checked={selectedItems[`${color}-${size}`] || false}
                       onChange={() => handleCheckboxChange(color, size)}
                     />
@@ -268,7 +323,7 @@ export const SizeChart = ({ productId }) => {
         </table>
         
         <div className="bg-yellow-200 p-4 border-t">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center mb-4">
             <div>
               <span className="font-bold text-lg">Size</span>
             </div>
@@ -283,13 +338,47 @@ export const SizeChart = ({ productId }) => {
               </div>
             </div>
           </div>
-          <div className="mt-4 text-center">
-            <button className="bg-purple-600 text-white px-6 py-2 rounded hover:bg-purple-700 transition-colors mr-2">
-              Product
-            </button>
-            <button className="bg-gray-600 text-white px-6 py-2 rounded hover:bg-gray-700 transition-colors">
-              Live/Cart
-            </button>
+
+          {/* Selection Summary */}
+          {total.count > 0 && (
+            <div className="bg-white p-4 rounded-lg mb-4 border-2 border-blue-300">
+              <h3 className="font-bold text-lg mb-2">Selection Summary:</h3>
+              <div className="flex justify-between items-center">
+                <div>
+                  <span className="text-gray-700">Selected: </span>
+                  <span className="font-bold">{total.count} items</span>
+                  <span className="text-sm text-gray-600 ml-2">
+                    ({total.isBulk ? 'Bulk' : 'Regular'} pricing)
+                  </span>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-gray-600">₹{total.pricePerItem} per item</div>
+                  <div className="text-xl font-bold text-blue-600">
+                    Total: ₹{total.total}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <div className="flex justify-between items-center">
+            <div className="flex gap-2">
+              <button className="bg-purple-600 text-white px-6 py-2 rounded hover:bg-purple-700 transition-colors">
+                Product
+              </button>
+              <button className="bg-gray-600 text-white px-6 py-2 rounded hover:bg-gray-700 transition-colors">
+                Live/Cart
+              </button>
+            </div>
+            
+            {total.count > 0 && (
+              <button
+                onClick={handleAddToCart}
+                className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition-colors font-bold"
+              >
+                Add {total.count} items to Cart (₹{total.total})
+              </button>
+            )}
           </div>
         </div>
       </div>
