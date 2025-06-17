@@ -49,6 +49,18 @@ class Product(BaseModel):
     images: List[str]
     is_active: bool = True
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class SizeChart(BaseModel):
+    colors: List[str]
+    sizes: List[str]
+    chart_code: str
+
+class PricingRule(BaseModel):
+    bulk_threshold: int
+    bulk_price: float
+    regular_price: float
+    bulk_label: str
+    regular_label: str
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 class Category(BaseModel):
