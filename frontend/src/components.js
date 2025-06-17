@@ -152,8 +152,8 @@ export const Header = () => {
   );
 };
 
-// Navigation Component - EXACT replica with editable categories
-export const Navigation = () => {
+// Navigation Component - EXACT replica with dynamic product switching
+export const Navigation = ({ onCategorySelect }) => {
   const [categories, setCategories] = useState([]);
 
   useEffect(() => {
@@ -165,30 +165,36 @@ export const Navigation = () => {
         console.error('Error fetching categories:', error);
         // Fallback to default categories if API fails
         setCategories([
-          { name: "Oversize 210gsm", color: "bg-red-500" },
-          { name: "Oversize 240gsm", color: "bg-orange-500" },
-          { name: "Kids Kneck", color: "bg-yellow-500" },
-          { name: "Oversize 190gsm", color: "bg-green-500" },
-          { name: "Tue Bio Kneck", color: "bg-blue-500" },
-          { name: "Bio Kneck", color: "bg-purple-500" },
-          { name: "Polo Shirts", color: "bg-pink-500" },
-          { name: "Sublimation", color: "bg-indigo-500" },
-          { name: "Premium Polo", color: "bg-red-600" },
-          { name: "Cotton Polo", color: "bg-orange-600" },
-          { name: "Hoodie 320gsm", color: "bg-yellow-600" },
-          { name: "Hoodie 270gsm", color: "bg-green-600" },
-          { name: "Sweatshirt", color: "bg-blue-600" },
-          { name: "Varsity", color: "bg-purple-600" },
-          { name: "Dropship Hoodie 430gsm", color: "bg-pink-600" },
-          { name: "Shorts", color: "bg-indigo-600" },
-          { name: "Gym vest", color: "bg-red-700" },
-          { name: "Activework OS", color: "bg-orange-700" },
-          { name: "Activework BF", color: "bg-yellow-700" }
+          { id: 1, name: "Oversize 210gsm", color: "bg-red-500" },
+          { id: 2, name: "Oversize 240gsm", color: "bg-orange-500" },
+          { id: 3, name: "Kids Kneck", color: "bg-yellow-500" },
+          { id: 4, name: "Oversize 190gsm", color: "bg-green-500" },
+          { id: 5, name: "Tue Bio Kneck", color: "bg-blue-500" },
+          { id: 6, name: "Bio Kneck", color: "bg-purple-500" },
+          { id: 7, name: "Polo Shirts", color: "bg-pink-500" },
+          { id: 8, name: "Sublimation", color: "bg-indigo-500" },
+          { id: 9, name: "Premium Polo", color: "bg-red-600" },
+          { id: 10, name: "Cotton Polo", color: "bg-orange-600" },
+          { id: 11, name: "Hoodie 320gsm", color: "bg-yellow-600" },
+          { id: 12, name: "Hoodie 270gsm", color: "bg-green-600" },
+          { id: 13, name: "Sweatshirt", color: "bg-blue-600" },
+          { id: 14, name: "Varsity", color: "bg-purple-600" },
+          { id: 15, name: "Dropship Hoodie 430gsm", color: "bg-pink-600" },
+          { id: 16, name: "Shorts", color: "bg-indigo-600" },
+          { id: 17, name: "Gym vest", color: "bg-red-700" },
+          { id: 18, name: "Activework OS", color: "bg-orange-700" },
+          { id: 19, name: "Activework BF", color: "bg-yellow-700" }
         ]);
       }
     };
     fetchCategories();
   }, []);
+
+  const handleCategoryClick = (category) => {
+    if (onCategorySelect) {
+      onCategorySelect(category.name);
+    }
+  };
 
   return (
     <div className="bg-gray-100 p-2">
@@ -196,8 +202,9 @@ export const Navigation = () => {
         <div className="flex flex-wrap gap-1 justify-center">
           {categories.map((category, index) => (
             <button
-              key={index}
-              className={`${category.color || 'bg-gray-500'} text-white px-3 py-1 text-xs rounded hover:opacity-80 transition-opacity`}
+              key={category.id || index}
+              onClick={() => handleCategoryClick(category)}
+              className={`${category.color || 'bg-gray-500'} text-white px-3 py-1 text-xs rounded hover:opacity-80 transition-opacity focus:ring-2 focus:ring-white`}
             >
               {category.name}
             </button>
