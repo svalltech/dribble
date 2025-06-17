@@ -40,6 +40,52 @@ export const AppProvider = ({ children }) => {
     toast.success('Logged out successfully');
   };
 
+  // Cart operations
+  const fetchCart = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const response = await axios.get(`${API_URL}/cart`, { headers });
+      setCart(response.data);
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+    }
+  };
+
+  const addToCart = async (productId, color, size, quantity = 1) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      
+      await axios.post(`${API_URL}/cart/add`, {
+        product_id: productId,
+        color,
+        size,
+        quantity
+      }, { headers });
+      
+      await fetchCart();
+      return true;
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast.error(error.response?.data?.detail || 'Failed to add to cart');
+      return false;
+    }
+  };
+
+  const removeFromCart = async (productId, color, size) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      
+      await axios.delete(`${API_URL}/cart/remove/${productId}?color=${color}&size=${size}`, { headers });
+      await fetchCart();
+      toast.success('Removed from cart');
+    } catch (error) {
+      toast.error('Failed to remove from cart');
+    }
+  };
+
   const addToCart = async (productId, color, size, quantity = 1) => {
     try {
       const token = localStorage.getItem('token');
