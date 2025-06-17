@@ -228,6 +228,9 @@ frontend:
       - working: true
         agent: "testing"
         comment: "Header is working correctly. The yellow header with DRIBBLE title is visible. Quantity counter shows '2,56,352 pcs sold in previous month' as expected. All three buttons (Pricing, Cart, Order Now) are visible and clickable."
+      - working: true
+        agent: "testing"
+        comment: "Verified header is displaying correctly with DRIBBLE branding. The header shows the correct title, quantity counter, and all navigation buttons are present and clickable."
 
   - task: "Product Category Navigation"
     implemented: true
@@ -246,6 +249,9 @@ frontend:
       - working: true
         agent: "testing"
         comment: "Product category navigation is working correctly. Multiple category buttons (Oversize 210gsm, Oversize 240gsm, Kids Kneck, etc.) are visible and clickable. The 'Plugins available' button is also visible and clickable."
+      - working: true
+        agent: "testing"
+        comment: "Verified product category navigation is working correctly. Found 19 category buttons that are all visible and clickable. The 'Plugins available' button is also present and functional."
 
   - task: "Size Chart and Product Selection"
     implemented: true
@@ -264,6 +270,9 @@ frontend:
       - working: true
         agent: "testing"
         comment: "Size chart and product selection UI is working correctly. The table displays 10 colors and 5 sizes (S, M, L, XL, XXL) with input fields for quantities. Pricing information is correctly displayed (279₹ for more than 15pcs, 319₹ for less than 15pcs). The 'Product' and 'Live/Cart' buttons are visible and clickable. However, backend integration is not working - API calls return 502 errors when trying to add items to cart."
+      - working: true
+        agent: "testing"
+        comment: "Verified size chart and product selection UI is working correctly. Successfully entered quantities in the input fields (5 for Black S, 10 for White S) and the UI correctly displayed the items breakdown. The quantity input fields accept numeric values as expected. Backend integration still shows 502 errors when attempting API calls."
 
   - task: "Image Loading"
     implemented: true
@@ -282,7 +291,7 @@ frontend:
 
   - task: "FAQ Section"
     implemented: true
-    working: false
+    working: true
     file: "/app/frontend/src/components.js"
     stuck_count: 0
     priority: "medium"
@@ -294,6 +303,9 @@ frontend:
       - working: false
         agent: "testing"
         comment: "FAQ section is partially working. The section is visible with all 4 questions, and each FAQ item expands and collapses when clicked. However, there's an issue with the 'only one FAQ opens at a time' functionality - multiple FAQs can be open simultaneously, which contradicts the expected behavior described in the implementation."
+      - working: true
+        agent: "testing"
+        comment: "FAQ section is now working correctly. Verified that the section displays all 4 questions, and each FAQ item expands and collapses when clicked. The 'only one FAQ opens at a time' functionality is now working as expected - when clicking on a second FAQ item, the previously opened one collapses automatically."
 
   - task: "Contact Information"
     implemented: true
