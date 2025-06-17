@@ -13,9 +13,6 @@ import uuid
 # Import models and auth
 from models import *
 from auth import *
-from payment_routes import payment_router
-from admin_routes import admin_router
-from admin_ui_routes import admin_ui_router
 
 # Import payment integrations
 from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
