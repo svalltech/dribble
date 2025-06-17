@@ -111,13 +111,27 @@ async def seed_database():
     
     print("👤 Created admin and test users")
     
-    # Create categories
+    # Create categories with exact colors from original site
     categories = [
-        Category(name="Oversized T-shirts", description="Premium oversized t-shirts for sports", image="https://images.unsplash.com/photo-1716369786631-b8b9c7ac1dc4", sort_order=1),
-        Category(name="Polo Shirts", description="Classic polo shirts for athletic wear", image="https://images.unsplash.com/photo-1604898426743-ed3d1ace7bf6", sort_order=2),
-        Category(name="Hoodies", description="Comfortable hoodies for training", image="https://images.unsplash.com/photo-1618354691714-7d92150909db", sort_order=3),
-        Category(name="Sports Wear", description="Complete sports apparel collection", image="https://images.unsplash.com/photo-1610502778270-c5c6f4c7d575", sort_order=4),
-        Category(name="Kids Collection", description="Sports apparel for young athletes", image="https://images.pexels.com/photos/6046231/pexels-photo-6046231.jpeg", sort_order=5),
+        Category(name="Oversize 210gsm", description="Premium oversized t-shirts", color="bg-red-500", sort_order=1),
+        Category(name="Oversize 240gsm", description="Heavy gauge oversized t-shirts", color="bg-orange-500", sort_order=2),
+        Category(name="Kids Kneck", description="Kids neck t-shirts", color="bg-yellow-500", sort_order=3),
+        Category(name="Oversize 190gsm", description="Light weight oversized t-shirts", color="bg-green-500", sort_order=4),
+        Category(name="Tue Bio Kneck", description="Tue Bio neck t-shirts", color="bg-blue-500", sort_order=5),
+        Category(name="Bio Kneck", description="Bio neck t-shirts", color="bg-purple-500", sort_order=6),
+        Category(name="Polo Shirts", description="Classic polo shirts", color="bg-pink-500", sort_order=7),
+        Category(name="Sublimation", description="Sublimation t-shirts", color="bg-indigo-500", sort_order=8),
+        Category(name="Premium Polo", description="Premium polo shirts", color="bg-red-600", sort_order=9),
+        Category(name="Cotton Polo", description="Cotton polo shirts", color="bg-orange-600", sort_order=10),
+        Category(name="Hoodie 320gsm", description="Heavy weight hoodies", color="bg-yellow-600", sort_order=11),
+        Category(name="Hoodie 270gsm", description="Medium weight hoodies", color="bg-green-600", sort_order=12),
+        Category(name="Sweatshirt", description="Comfortable sweatshirts", color="bg-blue-600", sort_order=13),
+        Category(name="Varsity", description="Varsity jackets", color="bg-purple-600", sort_order=14),
+        Category(name="Dropship Hoodie 430gsm", description="Dropship hoodies", color="bg-pink-600", sort_order=15),
+        Category(name="Shorts", description="Sports shorts", color="bg-indigo-600", sort_order=16),
+        Category(name="Gym vest", description="Gym vests", color="bg-red-700", sort_order=17),
+        Category(name="Activework OS", description="Activework oversized", color="bg-orange-700", sort_order=18),
+        Category(name="Activework BF", description="Activework boyfriend fit", color="bg-yellow-700", sort_order=19),
     ]
     
     for category in categories:
