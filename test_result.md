@@ -406,11 +406,15 @@ frontend:
 metadata:
   created_by: "testing_agent"
   version: "1.0"
-  test_sequence: 1
+  test_sequence: 2
   run_ui: true
 
 test_plan:
   current_focus:
+    - "Backend API Connectivity"
+    - "MongoDB Connection"
+    - "API Routes Configuration"
+  stuck_tasks:
     - "Authentication System"
     - "Product Management"
     - "Cart Operations"
@@ -418,7 +422,6 @@ test_plan:
     - "Category Management"
     - "Database Integration"
     - "API Security"
-  stuck_tasks: []
   test_all: true
   test_priority: "high_first"
 
@@ -429,3 +432,5 @@ agent_communication:
     message: "Completed testing of all frontend components. Most features are working correctly, but there's an issue with the FAQ section - multiple FAQs can be open simultaneously, which contradicts the expected behavior where only one FAQ should be open at a time. All other components are working as expected."
   - agent: "testing"
     message: "Starting backend testing for the DRIBBLE e-commerce application. Will test all major functionality including Authentication System, Product Management, Cart Operations, Order Processing, Category Management, Database Integration, and API Security."
+  - agent: "testing"
+    message: "CRITICAL ISSUE: All backend API endpoints are returning 502 errors. The frontend UI components are rendering correctly, but any functionality that requires backend API calls is failing. This includes product data fetching, cart operations, user authentication, and checkout process. The backend server appears to be running (supervisorctl shows it as RUNNING), but all API requests are failing with 502 Bad Gateway errors. This suggests an issue with the backend server configuration, database connectivity, or API routing."
