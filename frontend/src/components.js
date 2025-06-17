@@ -200,6 +200,109 @@ export const Header = () => {
   );
 };
 
+// Cart Modal Component
+export const CartModal = ({ onClose }) => {
+  const { cart, removeFromCart, fetchCart } = useApp();
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchCart();
+  }, []);
+
+  const handleRemoveItem = async (productId, color, size) => {
+    setLoading(true);
+    await removeFromCart(productId, color, size);
+    setLoading(false);
+  };
+
+  const handleCheckout = () => {
+    if (cart.items && cart.items.length > 0) {
+      window.location.href = '/checkout';
+    } else {
+      toast.error('Your cart is empty');
+    }
+  };
+
+  const cartItems = cart.items || [];
+  const cartTotal = cart.total || 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="fixed inset-0 bg-black bg-opacity-50" onClick={onClose}></div>
+      <div className="w-full max-w-2xl bg-white rounded-lg shadow-xl relative max-h-[80vh] overflow-hidden">
+        <div className="p-6 border-b">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold">Shopping Cart</h2>
+            <button 
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700 text-2xl"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+        
+        <div className="p-6 overflow-y-auto max-h-96">
+          {cartItems.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500 text-lg">Your cart is empty</p>
+              <button 
+                onClick={onClose}
+                className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Continue Shopping
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {cartItems.map((item, index) => (
+                <div key={index} className="flex items-center justify-between border-b pb-4">
+                  <div className="flex-1">
+                    <h3 className="font-medium">{item.product_name || 'Product'}</h3>
+                    <p className="text-sm text-gray-600">{item.color} - {item.size}</p>
+                    <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
+                    <p className="text-sm font-medium">₹{(item.unit_price * item.quantity).toFixed(2)}</p>
+                  </div>
+                  <button
+                    onClick={() => handleRemoveItem(item.product_id, item.color, item.size)}
+                    disabled={loading}
+                    className="text-red-500 hover:text-red-700 px-3 py-1 rounded-lg border border-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        {cartItems.length > 0 && (
+          <div className="p-6 border-t bg-gray-50">
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-lg font-bold">Total:</span>
+              <span className="text-2xl font-bold text-blue-600">₹{cartTotal.toFixed(2)}</span>
+            </div>
+            <div className="space-y-2">
+              <button
+                onClick={handleCheckout}
+                className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-bold hover:bg-blue-700 transition-colors"
+              >
+                Proceed to Checkout
+              </button>
+              <button
+                onClick={onClose}
+                className="w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Continue Shopping
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // Side Menu Component - EXACT replica of the popup menu
 export const SideMenu = ({ onClose }) => {
   const { user, login, logout } = useApp();
