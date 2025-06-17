@@ -124,12 +124,18 @@ export const useApp = () => {
 
 // Header Component - EXACT replica with cart counter and menu
 export const Header = () => {
-  const { cart } = useApp();
+  const { cart, fetchCart } = useApp();
   const [showMenu, setShowMenu] = useState(false);
+  const [showCart, setShowCart] = useState(false);
   const [currentQuantity, setCurrentQuantity] = useState("2,86,352");
   
   const totalItems = cart.items ? cart.items.reduce((sum, item) => sum + item.quantity, 0) : 0;
   const cartTotal = cart.total || 0;
+
+  // Force cart refresh when component mounts or updates
+  useEffect(() => {
+    fetchCart();
+  }, []);
 
   return (
     <>
@@ -145,7 +151,10 @@ export const Header = () => {
               <button className="bg-orange-500 text-white px-4 py-2 rounded font-semibold hover:bg-orange-600 transition-colors">
                 Pricing
               </button>
-              <button className="bg-green-500 text-white px-4 py-2 rounded font-semibold hover:bg-green-600 transition-colors relative">
+              <button 
+                onClick={() => setShowCart(true)}
+                className="bg-green-500 text-white px-4 py-2 rounded font-semibold hover:bg-green-600 transition-colors relative"
+              >
                 🛒 Cart
                 {totalItems > 0 && (
                   <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
@@ -153,7 +162,10 @@ export const Header = () => {
                   </span>
                 )}
               </button>
-              <button className="bg-blue-500 text-white px-4 py-2 rounded font-semibold hover:bg-blue-600 transition-colors">
+              <button 
+                onClick={() => window.location.href = '/checkout'}
+                className="bg-blue-500 text-white px-4 py-2 rounded font-semibold hover:bg-blue-600 transition-colors"
+              >
                 Order Now
               </button>
             </div>
@@ -181,6 +193,9 @@ export const Header = () => {
       
       {/* Side Menu Overlay */}
       {showMenu && <SideMenu onClose={() => setShowMenu(false)} />}
+      
+      {/* Cart Modal */}
+      {showCart && <CartModal onClose={() => setShowCart(false)} />}
     </>
   );
 };
