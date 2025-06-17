@@ -225,6 +225,9 @@ frontend:
       - working: true
         agent: "testing"
         comment: "Header is working correctly. The yellow header with BulkPlainTshirt.com title is visible. Quantity counter shows '2,56,352 pcs sold in previous month' as expected. All three buttons (Pricing, Cart, Order Now) are visible and clickable."
+      - working: true
+        agent: "testing"
+        comment: "Header is working correctly. The yellow header with DRIBBLE title is visible. Quantity counter shows '2,56,352 pcs sold in previous month' as expected. All three buttons (Pricing, Cart, Order Now) are visible and clickable."
 
   - task: "Product Category Navigation"
     implemented: true
@@ -240,6 +243,9 @@ frontend:
       - working: true
         agent: "testing"
         comment: "Product category navigation is working correctly. Found 20 product category buttons that are visible and clickable. The 'Plugins available' button is also visible and clickable. Hover effects on buttons work as expected."
+      - working: true
+        agent: "testing"
+        comment: "Product category navigation is working correctly. Multiple category buttons (Oversize 210gsm, Oversize 240gsm, Kids Kneck, etc.) are visible and clickable. The 'Plugins available' button is also visible and clickable."
 
   - task: "Size Chart and Product Selection"
     implemented: true
@@ -255,6 +261,9 @@ frontend:
       - working: true
         agent: "testing"
         comment: "Size chart and product selection is working correctly. The table displays 10 colors and 5 sizes (S, M, L, XL, XXL) with checkboxes that are clickable. Pricing information is correctly displayed (279₹ for more than 15pcs, 319₹ for less than 15pcs). The 'Product' and 'Live/Cart' buttons are visible and clickable."
+      - working: true
+        agent: "testing"
+        comment: "Size chart and product selection UI is working correctly. The table displays 10 colors and 5 sizes (S, M, L, XL, XXL) with input fields for quantities. Pricing information is correctly displayed (279₹ for more than 15pcs, 319₹ for less than 15pcs). The 'Product' and 'Live/Cart' buttons are visible and clickable. However, backend integration is not working - API calls return 502 errors when trying to add items to cart."
 
   - task: "Image Loading"
     implemented: true
@@ -315,6 +324,9 @@ frontend:
       - working: true
         agent: "testing"
         comment: "Footer is working correctly. All 6 footer links (Privacy Policy, Shipping and Delivery Policy, Return and Refund Policy, Terms and Conditions, Disclaimer, Sitemap) are visible. The 'Made in India' text and copyright information (© 2025 BulkPlainTshirt.com - All rights reserved) are displayed correctly."
+      - working: true
+        agent: "testing"
+        comment: "Footer is working correctly. All 6 footer links (Privacy Policy, Shipping and Delivery Policy, Return and Refund Policy, Terms and Conditions, Disclaimer, Sitemap) are visible. The 'Made in India' text and copyright information (© 2025 DRIBBLE - All rights reserved) are displayed correctly."
 
   - task: "Overall Responsiveness"
     implemented: true
@@ -330,6 +342,66 @@ frontend:
       - working: true
         agent: "testing"
         comment: "The website is responsive and adapts well to different screen sizes. Tested on desktop (1920x1080), tablet (768x1024), and mobile (390x844) viewports. All key elements remain visible and properly formatted across different screen sizes."
+
+  - task: "User Registration and Authentication"
+    implemented: true
+    working: false
+    file: "/app/frontend/src/components.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "User registration and authentication UI elements are not visible on the frontend. Could not find login/register buttons or forms. The authentication functionality appears to be implemented in the code (login, logout functions in AppProvider) but is not accessible through the UI."
+
+  - task: "Cart Functionality"
+    implemented: true
+    working: false
+    file: "/app/frontend/src/components.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "Cart UI is accessible through the Cart button, but the cart is empty even after adding items. Backend API calls to add items to cart are failing with 502 errors. The cart functionality is implemented in the code but not working due to backend API issues."
+
+  - task: "Checkout Process"
+    implemented: true
+    working: false
+    file: "/app/frontend/src/components.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "Checkout process could not be tested as the cart functionality is not working properly. The checkout button was not found in the cart view. The checkout route (/checkout) is not defined in the App.js routes."
+
+  - task: "Payment Integration"
+    implemented: true
+    working: false
+    file: "/app/frontend/src/components.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "Payment integration could not be tested as the checkout process is not accessible. Stripe integration is implemented in the backend (payment_routes.py) but could not be verified due to the inability to reach the payment stage in the checkout flow."
+
+  - task: "Admin Panel"
+    implemented: true
+    working: false
+    file: "/app/frontend/src/components.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "Admin panel route (/admin-ui/dashboard) is not accessible. The route is defined in the backend (admin_ui_routes.py) but not in the frontend routes (App.js). Received 'No routes matched location \"/admin-ui/dashboard\"' error when trying to access the admin panel."
 
 metadata:
   created_by: "testing_agent"
