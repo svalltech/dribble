@@ -27,6 +27,18 @@ class PaymentStatusEnum(str, Enum):
     REFUNDED = "refunded"
 
 # Product Models
+class PricingRule(BaseModel):
+    bulk_threshold: int = 15  # quantity threshold for bulk pricing
+    bulk_price: float
+    regular_price: float
+    bulk_label: str = "More than 15pcs"
+    regular_label: str = "Less than 15pcs"
+
+class SizeChart(BaseModel):
+    colors: List[str] = ["Black", "White", "Lavender", "Beige", "Red", "Sage Green", "Brown", "Maroon", "Orange", "Navy"]
+    sizes: List[str] = ["S", "M", "L", "XL", "XXL"]
+    chart_code: str = "OS210"  # Product code for size chart
+
 class ProductVariant(BaseModel):
     color: str
     size: SizeEnum
@@ -39,11 +51,13 @@ class Product(BaseModel):
     description: str
     category: str
     base_price: float
-    bulk_price: float  # Price for 15+ pieces
+    bulk_price: float
     gsm: Optional[str] = None
     material: str = "100% Cotton"
     variants: List[ProductVariant]
     images: List[str]
+    size_chart: SizeChart = Field(default_factory=SizeChart)
+    pricing_rules: PricingRule = Field(default_factory=lambda: PricingRule(bulk_price=279.0, regular_price=319.0))
     is_active: bool = True
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -58,6 +72,8 @@ class ProductCreate(BaseModel):
     material: str = "100% Cotton"
     variants: List[ProductVariant]
     images: List[str]
+    size_chart: Optional[SizeChart] = None
+    pricing_rules: Optional[PricingRule] = None
 
 class ProductUpdate(BaseModel):
     name: Optional[str] = None
@@ -69,6 +85,8 @@ class ProductUpdate(BaseModel):
     material: Optional[str] = None
     variants: Optional[List[ProductVariant]] = None
     images: Optional[List[str]] = None
+    size_chart: Optional[SizeChart] = None
+    pricing_rules: Optional[PricingRule] = None
     is_active: Optional[bool] = None
 
 # User Models
