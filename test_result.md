@@ -465,7 +465,11 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Backend API Functionality"
+    - "Product Display Integration"
+    - "Cart Integration"
+    - "User Authentication Flow"
+    - "E-commerce User Journey"
+    - "UI Components Integration"
   stuck_tasks: []
   test_all: true
   test_priority: "high_first"
