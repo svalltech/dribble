@@ -516,9 +516,6 @@ async def get_order(
         raise HTTPException(status_code=403, detail="Access denied")
 
 # Include all routers
-api_router.include_router(payment_router)
-api_router.include_router(admin_router)
-app.include_router(admin_ui_router)
 app.include_router(api_router)
 
 # Configure logging
