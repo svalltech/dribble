@@ -516,6 +516,7 @@ async def get_order(
 
 # Include all routers
 app.include_router(api_router)
+app.include_router(info_router)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
