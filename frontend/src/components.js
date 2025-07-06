@@ -352,70 +352,141 @@ export const CartModal = ({ onClose }) => {
 export const SideMenu = ({ onClose }) => {
   const { user, login, logout } = useApp();
   const [showLogin, setShowLogin] = useState(false);
+  const [showModal, setShowModal] = useState('');
+
+  const openModal = (modalType) => {
+    setShowModal(modalType);
+  };
+
+  const closeModal = () => {
+    setShowModal('');
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex">
-      <div className="fixed inset-0 bg-black bg-opacity-50" onClick={onClose}></div>
-      <div className="w-80 bg-slate-600 h-full shadow-xl relative text-white">
-        <button 
-          onClick={onClose}
-          className="absolute top-4 right-4 bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600"
-        >
-          Close
-        </button>
-        
-        <div className="p-6 pt-16">
-          {/* User Section */}
-          <div className="flex items-center mb-6">
-            <div className="w-16 h-16 bg-slate-500 rounded-full flex items-center justify-center mr-4">
-              <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"></path>
-              </svg>
+    <>
+      <div className="fixed inset-0 z-50 flex">
+        <div className="fixed inset-0 bg-black bg-opacity-50" onClick={onClose}></div>
+        <div className="w-80 bg-slate-600 h-full shadow-xl relative text-white">
+          <button 
+            onClick={onClose}
+            className="absolute top-4 right-4 bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600"
+          >
+            Close
+          </button>
+          
+          <div className="p-6 pt-16">
+            {/* User Section */}
+            <div className="flex items-center mb-6">
+              <div className="w-16 h-16 bg-slate-500 rounded-full flex items-center justify-center mr-4">
+                <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"></path>
+                </svg>
+              </div>
+              <div>
+                {user ? (
+                  <div>
+                    <p className="font-semibold">{user.full_name}</p>
+                    <button onClick={logout} className="text-sm text-gray-300 hover:text-white">Logout</button>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={() => setShowLogin(true)}
+                    className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition-colors"
+                  >
+                    Login
+                  </button>
+                )}
+              </div>
             </div>
-            <div>
-              {user ? (
-                <div>
-                  <p className="font-semibold">{user.full_name}</p>
-                  <button onClick={logout} className="text-sm text-gray-300 hover:text-white">Logout</button>
-                </div>
-              ) : (
-                <button 
-                  onClick={() => setShowLogin(true)}
-                  className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition-colors"
-                >
-                  Login
-                </button>
-              )}
-            </div>
-          </div>
 
-          {/* Menu Items */}
-          <div className="space-y-1">
-            <div className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer">Delivery Details</div>
-            <div className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer">Orders/Bills/Tracking</div>
-            <div className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer">Shipping Calculator</div>
-            <div className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer flex items-center">
-              Live Stock <span className="ml-2 w-2 h-2 bg-green-400 rounded-full"></span>
+            {/* Menu Items */}
+            <div className="space-y-1">
+              <div 
+                onClick={() => openModal('delivery')}
+                className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer"
+              >
+                Delivery Details
+              </div>
+              <div 
+                onClick={() => openModal('orders')}
+                className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer"
+              >
+                Orders/Bills/Tracking
+              </div>
+              <div 
+                onClick={() => openModal('shipping')}
+                className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer"
+              >
+                Shipping Calculator
+              </div>
+              <div 
+                onClick={() => openModal('stock')}
+                className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer flex items-center"
+              >
+                Live Stock <span className="ml-2 w-2 h-2 bg-green-400 rounded-full"></span>
+              </div>
+              <div 
+                onClick={() => openModal('pricing')}
+                className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer"
+              >
+                Pricing
+              </div>
+              <div 
+                onClick={() => openModal('videos')}
+                className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer"
+              >
+                Videos
+              </div>
+              <div 
+                onClick={() => openModal('suggestions')}
+                className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer"
+              >
+                Suggestions
+              </div>
+              <div 
+                onClick={() => openModal('contact')}
+                className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer"
+              >
+                Contact us
+              </div>
+              <div 
+                onClick={() => openModal('about')}
+                className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer"
+              >
+                About us
+              </div>
+              <div 
+                onClick={() => openModal('faq')}
+                className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer"
+              >
+                FAQ
+              </div>
             </div>
-            <div className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer">Pricing</div>
-            <div className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer">Videos</div>
-            <div className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer">Suggestions</div>
-            <div className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer">Contact us</div>
-            <div className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer">About us</div>
-            <div className="text-white py-3 px-4 hover:bg-slate-500 rounded cursor-pointer">FAQ</div>
-          </div>
 
-          {/* Weather */}
-          <div className="mt-8 flex items-center text-orange-400">
-            <span className="text-2xl mr-2">☀️</span>
-            <span>30°C</span>
+            {/* Weather */}
+            <div className="mt-8 flex items-center text-orange-400">
+              <span className="text-2xl mr-2">☀️</span>
+              <span>30°C</span>
+            </div>
           </div>
         </div>
+        
+        {/* Login Modal */}
+        {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
       </div>
-      
-      {/* Login Modal */}
-      {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
-    </div>
+
+      {/* Modal Components */}
+      {showModal === 'delivery' && <DeliveryDetailsModal onClose={closeModal} />}
+      {showModal === 'orders' && <OrdersTrackingModal onClose={closeModal} />}
+      {showModal === 'shipping' && <ShippingCalculatorModal onClose={closeModal} />}
+      {showModal === 'stock' && <LiveStockModal onClose={closeModal} />}
+      {showModal === 'pricing' && <PricingModal onClose={closeModal} />}
+      {showModal === 'videos' && <VideosModal onClose={closeModal} />}
+      {showModal === 'suggestions' && <SuggestionsModal onClose={closeModal} />}
+      {showModal === 'contact' && <ContactUsModal onClose={closeModal} />}
+      {showModal === 'about' && <AboutUsModal onClose={closeModal} />}
+      {showModal === 'faq' && <FAQModal onClose={closeModal} />}
+    </>
   );
 };
 
