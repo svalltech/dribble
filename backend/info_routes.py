@@ -383,9 +383,9 @@ async def get_pricing_info(database: AsyncIOMotorDatabase = Depends(get_database
         raise HTTPException(status_code=500, detail=str(e))
 
 # Add missing import
-from pydantic import Field
+# from pydantic import Field
 
 # Add database dependency function
-async def get_database():
-    from server import db
-    return db
+# async def get_database():
+#     from server import db
+#     return db
