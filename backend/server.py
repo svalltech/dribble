@@ -193,7 +193,7 @@ async def get_product_sizechart(product_id: str, database: AsyncIOMotorDatabase 
 async def update_product_sizechart(
     product_id: str,
     size_chart_data: dict,
-    current_user: User = Depends(get_current_user_with_db(Depends(get_database))),
+    current_user: User = Depends(require_admin),
     database: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """Update size chart and pricing for a specific product (Admin only)."""
