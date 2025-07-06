@@ -464,7 +464,7 @@ async def calculate_order(
 @api_router.post("/orders", response_model=Order)
 async def create_order(
     order_data: OrderCreate,
-    current_user: Optional[User] = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_db),
     database: AsyncIOMotorDatabase = Depends(get_database)
 ):
     # Calculate order totals
