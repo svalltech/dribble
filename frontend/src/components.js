@@ -159,6 +159,7 @@ export const Header = () => {
   const { cart, fetchCart } = useApp();
   const [showMenu, setShowMenu] = useState(false);
   const [showCart, setShowCart] = useState(false);
+  const [showPricing, setShowPricing] = useState(false);
   const [currentQuantity, setCurrentQuantity] = useState("2,86,352");
   
   const totalItems = cart.items ? cart.items.reduce((sum, item) => sum + item.quantity, 0) : 0;
@@ -207,7 +208,10 @@ export const Header = () => {
               <span className="text-sm text-gray-700">~ {currentQuantity} pcs sold in previous month ~</span>
             </div>
             <div className="flex justify-center gap-4 mt-3">
-              <button className="bg-orange-500 text-white px-4 py-2 rounded font-semibold hover:bg-orange-600 transition-colors">
+              <button 
+                onClick={() => setShowPricing(true)}
+                className="bg-orange-500 text-white px-4 py-2 rounded font-semibold hover:bg-orange-600 transition-colors"
+              >
                 Pricing
               </button>
               <button 
@@ -255,6 +259,9 @@ export const Header = () => {
       
       {/* Cart Modal */}
       {showCart && <CartModal onClose={() => setShowCart(false)} />}
+      
+      {/* Pricing Modal */}
+      {showPricing && <PricingModal onClose={() => setShowPricing(false)} />}
     </>
   );
 };
