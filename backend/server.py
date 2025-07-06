@@ -209,7 +209,7 @@ async def create_product(
 async def update_product(
     product_id: str,
     product_data: ProductUpdate,
-    current_user: User = Depends(get_current_user_with_db(Depends(get_database))),
+    current_user: User = Depends(require_admin),
     database: AsyncIOMotorDatabase = Depends(get_database)
 ):
     if not current_user or not current_user.is_admin:
