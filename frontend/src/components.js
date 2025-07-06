@@ -767,9 +767,14 @@ export const SizeChart = ({ productId, selectedCategory }) => {
       if (totalAdded > 0) {
         setQuantities({});
         toast.success(`Added ${totalAdded} items to cart!`);
-        // Force header to re-render by triggering a small delay
+        
+        // Trigger multiple update mechanisms
         setTimeout(() => {
           window.dispatchEvent(new Event('cartUpdated'));
+          localStorage.setItem('cartUpdate', Date.now().toString());
+          
+          // Force a direct app context update
+          window.dispatchEvent(new CustomEvent('forceCartRefresh'));
         }, 100);
       }
     } catch (error) {
