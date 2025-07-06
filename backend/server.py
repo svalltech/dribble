@@ -195,7 +195,7 @@ async def update_product_sizechart(
 @api_router.post("/products", response_model=Product)
 async def create_product(
     product_data: ProductCreate,
-    current_user: User = Depends(get_current_user_with_db(Depends(get_database))),
+    current_user: User = Depends(require_admin),
     database: AsyncIOMotorDatabase = Depends(get_database)
 ):
     if not current_user or not current_user.is_admin:
