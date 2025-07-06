@@ -129,7 +129,7 @@ async def login(login_data: UserLogin, database: AsyncIOMotorDatabase = Depends(
     return TokenResponse(access_token=access_token, user=user_response)
 
 @api_router.get("/auth/me", response_model=User)
-async def get_me(current_user: User = Depends(get_current_user)):
+async def get_me(current_user: User = Depends(get_current_user_db)):
     if not current_user:
         raise HTTPException(status_code=401, detail="Not authenticated")
     return current_user
