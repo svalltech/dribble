@@ -347,7 +347,7 @@ async def add_to_cart(
     cart_item: CartAdd,
     request: Request,
     response: Response,
-    current_user: Optional[User] = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_db),
     database: AsyncIOMotorDatabase = Depends(get_database)
 ):
     # Verify product exists and has stock
