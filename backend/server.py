@@ -50,14 +50,7 @@ async def get_database() -> AsyncIOMotorDatabase:
     return db
 
 # Dependency injection for auth
-def get_current_user_with_db(database: AsyncIOMotorDatabase = Depends(get_database)):
-    async def _get_current_user(
-        credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False))
-    ) -> Optional[User]:
-        if not credentials:
-            return None
-        return await get_current_user(credentials, database)
-    return _get_current_user
+# Removed get_current_user_with_db function as it's no longer needed
 
 # ============================================================================
 # AUTHENTICATION ROUTES
