@@ -15,9 +15,7 @@ from auth import get_current_user
 info_router = APIRouter(prefix="/api/info")
 
 # Add database dependency function
-async def get_database():
-    from server import get_database
-    return await get_database()
+from server import get_database
 
 # Models for info routes
 class ContactMessage(BaseModel):
