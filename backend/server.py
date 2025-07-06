@@ -523,7 +523,7 @@ async def create_order(
 
 @api_router.get("/orders", response_model=List[Order])
 async def get_orders(
-    current_user: Optional[User] = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_db),
     database: AsyncIOMotorDatabase = Depends(get_database)
 ):
     if not current_user:
