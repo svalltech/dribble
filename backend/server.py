@@ -265,7 +265,7 @@ def get_session_id(request: Request) -> str:
 async def get_cart(
     request: Request,
     response: Response,
-    current_user: Optional[User] = Depends(get_current_user_with_db(Depends(get_database))),
+    current_user: Optional[User] = Depends(get_current_user),
     database: AsyncIOMotorDatabase = Depends(get_database)
 ):
     if current_user:
