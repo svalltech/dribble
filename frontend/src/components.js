@@ -153,7 +153,15 @@ export const Header = () => {
   // Force cart refresh when component mounts or updates
   useEffect(() => {
     fetchCart();
-  }, []);
+    
+    // Listen for cart updates
+    const handleCartUpdate = () => {
+      fetchCart();
+    };
+    
+    window.addEventListener('cartUpdated', handleCartUpdate);
+    return () => window.removeEventListener('cartUpdated', handleCartUpdate);
+  }, [fetchCart]);
 
   return (
     <>
