@@ -10,7 +10,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from models import User
-from auth import get_current_user_with_db
+from auth import get_current_user
 
 info_router = APIRouter(prefix="/api/info")
 
@@ -295,7 +295,7 @@ async def get_contact_info():
 @info_router.post("/suggestions")
 async def submit_suggestion(
     suggestion: Suggestion,
-    current_user: Optional[User] = Depends(get_current_user_with_db(Depends(get_database))),
+    current_user: Optional[User] = Depends(get_current_user),
     database: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """Submit a suggestion or feedback"""
