@@ -124,14 +124,15 @@ async def get_delivery_details():
 # ============================================================================
 
 @info_router.post("/shipping-calculator")
-async def calculate_shipping(
-    calculation: ShippingCalculation,
-    database: AsyncIOMotorDatabase = Depends(get_database)
-):
+async def calculate_shipping(calculation: ShippingCalculation):
     """Calculate shipping cost based on pincode and weight"""
     try:
-        # Find delivery zone by pincode
-        zones = await database.delivery_zones.find({"is_active": True}).to_list(length=100)
+        # Static zone data for calculation
+        zones = [
+            {"pincode_prefix": "400", "shipping_cost": 50.0, "delivery_days": 2, "is_cod_available": True, "is_express_available": True},
+            {"pincode_prefix": "560", "shipping_cost": 75.0, "delivery_days": 3, "is_cod_available": True, "is_express_available": False},
+            {"pincode_prefix": "110", "shipping_cost": 60.0, "delivery_days": 2, "is_cod_available": True, "is_express_available": True}
+        ]
         
         shipping_cost = 75.0  # Default shipping cost
         delivery_days = 5     # Default delivery days
@@ -140,7 +141,7 @@ async def calculate_shipping(
         
         # Check if pincode falls in any zone
         for zone in zones:
-            if calculation.pincode.startswith(zone.get("pincode_range", "").split("-")[0][:3]):
+            if calculation.pincode.startswith(zone["pincode_prefix"]):
                 shipping_cost = zone["shipping_cost"]
                 delivery_days = zone["delivery_days"]
                 is_cod_available = zone["is_cod_available"]
