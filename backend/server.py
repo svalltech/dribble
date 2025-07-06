@@ -229,6 +229,22 @@ async def update_product(
     updated_product = await database.products.find_one({"id": product_id})
     return Product(**updated_product)
 
+@api_router.delete("/products/{product_id}")
+async def delete_product(
+    product_id: str,
+    current_user: User = Depends(require_admin),
+    database: AsyncIOMotorDatabase = Depends(get_database)
+):
+    if not current_user or not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    result = await database.products.delete_one({"id": product_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    return {"message": "Product deleted successfully"}
+
 # ============================================================================
 # CATEGORY ROUTES
 # ============================================================================
