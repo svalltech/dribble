@@ -69,50 +69,45 @@ class CompanyInfo(BaseModel):
 # ============================================================================
 
 @info_router.get("/delivery-details")
-async def get_delivery_details(database: AsyncIOMotorDatabase = Depends(get_database)):
+async def get_delivery_details():
     """Get delivery zones and policies"""
     try:
-        zones = await database.delivery_zones.find({"is_active": True}).to_list(length=100)
-        
-        # If no zones exist, create default zones
-        if not zones:
-            default_zones = [
-                {
-                    "id": str(uuid.uuid4()),
-                    "state": "Maharashtra", 
-                    "city": "Mumbai",
-                    "pincode_range": "400001-400097",
-                    "delivery_days": 2,
-                    "shipping_cost": 50.0,
-                    "is_cod_available": True,
-                    "is_express_available": True
-                },
-                {
-                    "id": str(uuid.uuid4()),
-                    "state": "Karnataka", 
-                    "city": "Bangalore",
-                    "pincode_range": "560001-560097", 
-                    "delivery_days": 3,
-                    "shipping_cost": 75.0,
-                    "is_cod_available": True,
-                    "is_express_available": False
-                },
-                {
-                    "id": str(uuid.uuid4()),
-                    "state": "Delhi", 
-                    "city": "New Delhi",
-                    "pincode_range": "110001-110097",
-                    "delivery_days": 2,
-                    "shipping_cost": 60.0,
-                    "is_cod_available": True,
-                    "is_express_available": True
-                }
-            ]
-            await database.delivery_zones.insert_many(default_zones)
-            zones = default_zones
+        # Return static data for now
+        default_zones = [
+            {
+                "id": str(uuid.uuid4()),
+                "state": "Maharashtra", 
+                "city": "Mumbai",
+                "pincode_range": "400001-400097",
+                "delivery_days": 2,
+                "shipping_cost": 50.0,
+                "is_cod_available": True,
+                "is_express_available": True
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "state": "Karnataka", 
+                "city": "Bangalore",
+                "pincode_range": "560001-560097", 
+                "delivery_days": 3,
+                "shipping_cost": 75.0,
+                "is_cod_available": True,
+                "is_express_available": False
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "state": "Delhi", 
+                "city": "New Delhi",
+                "pincode_range": "110001-110097",
+                "delivery_days": 2,
+                "shipping_cost": 60.0,
+                "is_cod_available": True,
+                "is_express_available": True
+            }
+        ]
         
         return {
-            "zones": zones,
+            "zones": default_zones,
             "policies": {
                 "free_shipping_threshold": 500,
                 "express_delivery_cost": 100,
