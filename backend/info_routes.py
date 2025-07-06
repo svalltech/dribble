@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from typing import List, Optional
 from datetime import datetime
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 import uuid
 
 # Import database dependency
@@ -13,6 +13,11 @@ from models import User
 from auth import get_current_user_with_db
 
 info_router = APIRouter(prefix="/api/info")
+
+# Add database dependency function
+async def get_database():
+    from server import db
+    return db
 
 # Models for info routes
 class ContactMessage(BaseModel):
