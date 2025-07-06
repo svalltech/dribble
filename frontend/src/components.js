@@ -740,6 +740,10 @@ export const SizeChart = ({ productId, selectedCategory }) => {
       if (totalAdded > 0) {
         setQuantities({});
         toast.success(`Added ${totalAdded} items to cart!`);
+        // Force header to re-render by triggering a small delay
+        setTimeout(() => {
+          window.dispatchEvent(new Event('cartUpdated'));
+        }, 100);
       }
     } catch (error) {
       toast.error('Failed to add items to cart');
