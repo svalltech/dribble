@@ -360,9 +360,9 @@ async def add_to_cart(
 async def remove_from_cart(
     product_id: str,
     color: str,
-    size: SizeEnum,
+    size: str,
     request: Request,
-    current_user: Optional[User] = Depends(get_current_user_with_db(Depends(get_database))),
+    current_user: Optional[User] = Depends(get_current_user),
     database: AsyncIOMotorDatabase = Depends(get_database)
 ):
     if current_user:
