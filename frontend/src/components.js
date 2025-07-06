@@ -1,6 +1,20 @@
 import React, { useState, useEffect, useContext, createContext } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { 
+  DeliveryDetailsModal, 
+  ShippingCalculatorModal, 
+  LiveStockModal, 
+  ContactUsModal 
+} from './pages/InfoPages';
+import { 
+  AboutUsModal, 
+  PricingModal, 
+  VideosModal, 
+  SuggestionsModal, 
+  OrdersTrackingModal, 
+  FAQModal 
+} from './pages/MoreInfoPages';
 
 // API Configuration
 const API_BASE = process.env.REACT_APP_BACKEND_URL || 'https://aa4f6fe3-4ad0-49ff-bf5e-4f672779c6bd.preview.emergentagent.com';
