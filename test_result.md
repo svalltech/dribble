@@ -693,9 +693,8 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Cart Counter Update"
-  stuck_tasks:
     - "Cart Functionality"
+  stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
