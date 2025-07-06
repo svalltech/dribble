@@ -50,6 +50,37 @@ async def get_database() -> AsyncIOMotorDatabase:
     return db
 
 # Dependency injection for auth
+async def get_current_user_db(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    database: AsyncIOMotorDatabase = Depends(get_database)
+) -> Optional[User]:
+    """Get current user from JWT token with database access."""
+    if not credentials:
+        return None
+    
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            return None
+    except JWTError:
+        return None
+    
+    user = await get_user_by_email(database, email)
+    if user is None:
+        return None
+    
+    # Convert to User (remove hashed_password)
+    return User(
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        phone=user.phone,
+        is_active=user.is_active,
+        is_admin=user.is_admin,
+        created_at=user.created_at
+    )
+
 # Removed get_current_user_with_db function as it's no longer needed
 
 # ============================================================================
