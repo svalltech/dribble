@@ -402,7 +402,7 @@ async def remove_from_cart(
     color: str,
     size: str,
     request: Request,
-    current_user: Optional[User] = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_db),
     database: AsyncIOMotorDatabase = Depends(get_database)
 ):
     if current_user:
