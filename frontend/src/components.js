@@ -271,7 +271,7 @@ export const Header = () => {
 
 // Cart Modal Component
 export const CartModal = ({ onClose }) => {
-  const { cart, removeFromCart, fetchCart } = useApp();
+  const { cart, removeFromCart, fetchCart, addToCart } = useApp();
   const [loading, setLoading] = useState(false);
   const [quantities, setQuantities] = useState({});
 
@@ -322,7 +322,6 @@ export const CartModal = ({ onClose }) => {
       await removeFromCart(item.product_id, item.color, item.size);
       
       if (newQuantity > 0) {
-        const { addToCart } = useApp();
         await addToCart(item.product_id, item.color, item.size, newQuantity);
       }
       
