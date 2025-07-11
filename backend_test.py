@@ -6,7 +6,7 @@ import uuid
 from typing import Dict, Any, List, Optional
 
 # Backend URL from frontend/.env
-BACKEND_URL = "https://aa4f6fe3-4ad0-49ff-bf5e-4f672779c6bd.preview.emergentagent.com/api"
+BACKEND_URL = "https://cecd11b7-b73d-489a-874b-a29bc1a6d120.preview.emergentagent.com/api"
 
 # Test credentials
 ADMIN_EMAIL = "admin@dribble-sports.com"

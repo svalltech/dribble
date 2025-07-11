@@ -139,7 +139,7 @@ backend:
         comment: "Implemented product listing with filters and search, individual product retrieval, admin product creation and updates, and product variants with stock management."
       - working: false
         agent: "testing"
-        comment: "Backend API is returning 502 errors. Product data could not be fetched from the API. Console logs show errors when trying to fetch products: 'Failed to load resource: the server responded with a status of 502 () at https://aa4f6fe3-4ad0-49ff-bf5e-4f672779c6bd.preview.emergentagent.com/api/products?limit=1'."
+        comment: "Backend API is returning 502 errors. Product data could not be fetched from the API. Console logs show errors when trying to fetch products: 'Failed to load resource: the server responded with a status of 502 () at https://cecd11b7-b73d-489a-874b-a29bc1a6d120.preview.emergentagent.com/api/products?limit=1'."
       - working: true
         agent: "main"
         comment: "FIXED: Backend now responding correctly. API endpoints working. Database seeded with product data."
@@ -160,7 +160,7 @@ backend:
         comment: "Implemented cart functionality for both authenticated and anonymous users, cart retrieval with pricing calculations, removing items from cart, and bulk pricing logic for 15+ pieces."
       - working: false
         agent: "testing"
-        comment: "Backend API is returning 502 errors. Cart operations could not be tested properly. Adding items to cart showed a success message in the UI but API calls failed with 502 errors: 'Failed to load resource: the server responded with a status of 502 () at https://aa4f6fe3-4ad0-49ff-bf5e-4f672779c6bd.preview.emergentagent.com/api/cart/add'."
+        comment: "Backend API is returning 502 errors. Cart operations could not be tested properly. Adding items to cart showed a success message in the UI but API calls failed with 502 errors: 'Failed to load resource: the server responded with a status of 502 () at https://cecd11b7-b73d-489a-874b-a29bc1a6d120.preview.emergentagent.com/api/cart/add'."
       - working: true
         agent: "main"
         comment: "FIXED: Backend cart endpoints now operational. Ready for testing cart functionality."
@@ -202,7 +202,7 @@ backend:
         comment: "Implemented category listing and admin category creation."
       - working: false
         agent: "testing"
-        comment: "Backend API is returning 502 errors. Category management could not be tested. Console logs show errors when trying to fetch categories: 'Failed to load resource: the server responded with a status of 502 () at https://aa4f6fe3-4ad0-49ff-bf5e-4f672779c6bd.preview.emergentagent.com/api/categories'."
+        comment: "Backend API is returning 502 errors. Category management could not be tested. Console logs show errors when trying to fetch categories: 'Failed to load resource: the server responded with a status of 502 () at https://cecd11b7-b73d-489a-874b-a29bc1a6d120.preview.emergentagent.com/api/categories'."
       - working: true
         agent: "main"
         comment: "FIXED: Categories API working. Database seeded with 19 product categories."
