@@ -17,6 +17,9 @@ import {
 } from './pages/MoreInfoPages';
 
 // API Configuration
+// Configure axios to include credentials (cookies) with requests
+axios.defaults.withCredentials = true;
+
 const API_BASE = process.env.REACT_APP_BACKEND_URL || 'https://aa4f6fe3-4ad0-49ff-bf5e-4f672779c6bd.preview.emergentagent.com';
 const API_URL = `${API_BASE}/api`;
 
