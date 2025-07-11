@@ -108,7 +108,29 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const removeFromCart = async (productId, color, size) => {
+  const updateCartQuantity = async (productId, color, size, quantity) => {
+    try {
+      const response = await axios.put(`${API_URL}/cart/update`, {
+        product_id: productId,
+        color,
+        size,
+        quantity: parseInt(quantity)
+      });
+      
+      if (response.data) {
+        await fetchCart();
+        // Trigger cart update events
+        window.dispatchEvent(new Event('cartUpdated'));
+        localStorage.setItem('cartUpdate', Date.now().toString());
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error updating cart quantity:', error);
+      toast.error(error.response?.data?.detail || 'Failed to update quantity');
+      return false;
+    }
+  };
     try {
       const token = localStorage.getItem('token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
