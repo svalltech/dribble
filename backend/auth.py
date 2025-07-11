@@ -52,11 +52,11 @@ async def authenticate_user(db: AsyncIOMotorDatabase, email: str, password: str)
         return None
     return user
 
-async def get_current_user(
+async def get_current_user_with_db(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: AsyncIOMotorDatabase = None
 ) -> Optional[User]:
-    """Get current user from JWT token."""
+    """Get current user from JWT token with database access."""
     if not credentials:
         return None
     
@@ -83,24 +83,40 @@ async def get_current_user(
         created_at=user.created_at
     )
 
-def require_auth(current_user: User = Depends(get_current_user)) -> User:
-    """Require authentication and return current user."""
-    if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return current_user
+def require_auth_with_db(db: AsyncIOMotorDatabase):
+    """Create a dependency that requires authentication with database access."""
+    async def _require_auth(
+        credentials: HTTPAuthorizationCredentials = Depends(security)
+    ) -> User:
+        current_user = await get_current_user_with_db(credentials, db)
+        if not current_user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return current_user
+    return _require_auth
 
-def require_admin(user: User = Depends(require_auth)) -> User:
-    """Require admin privileges."""
-    if not user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions"
-        )
-    return user
+def require_admin_with_db(db: AsyncIOMotorDatabase):
+    """Create a dependency that requires admin privileges with database access."""
+    async def _require_admin(
+        credentials: HTTPAuthorizationCredentials = Depends(security)
+    ) -> User:
+        current_user = await get_current_user_with_db(credentials, db)
+        if not current_user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        if not current_user.is_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not enough permissions"
+            )
+        return current_user
+    return _require_admin
 
 def get_session_id(request: Request) -> str:
     """Get or create session ID for anonymous users."""
