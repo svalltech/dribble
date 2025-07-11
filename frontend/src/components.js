@@ -271,8 +271,9 @@ export const Header = () => {
 
 // Cart Modal Component
 export const CartModal = ({ onClose }) => {
-  const { cart, removeFromCart, fetchCart } = useApp();
+  const { cart, removeFromCart, fetchCart, addToCart } = useApp();
   const [loading, setLoading] = useState(false);
+  const [updatingItems, setUpdatingItems] = useState({});
 
   useEffect(() => {
     fetchCart();
@@ -282,6 +283,29 @@ export const CartModal = ({ onClose }) => {
     setLoading(true);
     await removeFromCart(productId, color, size);
     setLoading(false);
+  };
+
+  const handleQuantityChange = async (item, newQuantity) => {
+    if (newQuantity < 1) return;
+    
+    const itemKey = `${item.product_id}-${item.color}-${item.size}`;
+    setUpdatingItems(prev => ({ ...prev, [itemKey]: true }));
+    
+    try {
+      // Remove the current item completely
+      await removeFromCart(item.product_id, item.color, item.size);
+      
+      // Add it back with new quantity
+      if (newQuantity > 0) {
+        await addToCart(item.product_id, item.color, item.size, newQuantity);
+      }
+      
+      await fetchCart();
+    } catch (error) {
+      toast.error('Failed to update quantity');
+    } finally {
+      setUpdatingItems(prev => ({ ...prev, [itemKey]: false }));
+    }
   };
 
   const handleCheckout = () => {
@@ -298,7 +322,7 @@ export const CartModal = ({ onClose }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="fixed inset-0 bg-black bg-opacity-50" onClick={onClose}></div>
-      <div className="w-full max-w-2xl bg-white rounded-lg shadow-xl relative max-h-[80vh] overflow-hidden">
+      <div className="w-full max-w-3xl bg-white rounded-lg shadow-xl relative max-h-[85vh] overflow-hidden mx-4">
         <div className="p-6 border-b">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold">Shopping Cart</h2>
@@ -311,7 +335,7 @@ export const CartModal = ({ onClose }) => {
           </div>
         </div>
         
-        <div className="p-6 overflow-y-auto max-h-96">
+        <div className="p-6 overflow-y-auto max-h-[60vh]">
           {cartItems.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-gray-500 text-lg">Your cart is empty</p>
@@ -324,43 +348,81 @@ export const CartModal = ({ onClose }) => {
             </div>
           ) : (
             <div className="space-y-4">
-              {cartItems.map((item, index) => (
-                <div key={index} className="flex items-center justify-between border-b pb-4">
-                  <div className="flex-1">
-                    <h3 className="font-medium">{item.product_name || 'Product'}</h3>
-                    <p className="text-sm text-gray-600">{item.color} - {item.size}</p>
-                    <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
-                    <p className="text-sm font-medium">₹{(item.unit_price * item.quantity).toFixed(2)}</p>
+              {cartItems.map((item, index) => {
+                const itemKey = `${item.product_id}-${item.color}-${item.size}`;
+                const isUpdating = updatingItems[itemKey];
+                
+                return (
+                  <div key={index} className="bg-gray-50 p-4 rounded-lg border">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      {/* Product Info */}
+                      <div className="flex-1">
+                        <h3 className="font-medium text-lg">{item.product_name || 'Product'}</h3>
+                        <p className="text-sm text-gray-600">{item.color} - {item.size}</p>
+                        <p className="text-sm font-medium text-green-600">₹{item.unit_price} per piece</p>
+                      </div>
+                      
+                      {/* Quantity Controls */}
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center border border-gray-300 rounded-lg bg-white">
+                          <button
+                            onClick={() => handleQuantityChange(item, item.quantity - 1)}
+                            disabled={isUpdating || item.quantity <= 1}
+                            className="px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            −
+                          </button>
+                          <span className="px-4 py-2 font-medium min-w-[60px] text-center">
+                            {isUpdating ? '...' : item.quantity}
+                          </span>
+                          <button
+                            onClick={() => handleQuantityChange(item, item.quantity + 1)}
+                            disabled={isUpdating}
+                            className="px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            +
+                          </button>
+                        </div>
+                        
+                        {/* Item Total */}
+                        <div className="text-right">
+                          <p className="font-bold text-lg">₹{(item.unit_price * item.quantity).toFixed(2)}</p>
+                        </div>
+                        
+                        {/* Remove Button */}
+                        <button
+                          onClick={() => handleRemoveItem(item.product_id, item.color, item.size)}
+                          disabled={loading || isUpdating}
+                          className="text-red-500 hover:text-red-700 px-3 py-2 rounded-lg border border-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 text-sm"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => handleRemoveItem(item.product_id, item.color, item.size)}
-                    disabled={loading}
-                    className="text-red-500 hover:text-red-700 px-3 py-1 rounded-lg border border-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
         
         {cartItems.length > 0 && (
           <div className="p-6 border-t bg-gray-50">
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-lg font-bold">Total:</span>
-              <span className="text-2xl font-bold text-blue-600">₹{cartTotal.toFixed(2)}</span>
+            <div className="flex justify-between items-center mb-6">
+              <span className="text-xl font-bold">Total:</span>
+              <span className="text-3xl font-bold text-blue-600">₹{cartTotal.toFixed(2)}</span>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-3">
               <button
                 onClick={handleCheckout}
-                className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-bold hover:bg-blue-700 transition-colors"
+                disabled={loading}
+                className="w-full bg-blue-600 text-white py-4 px-6 rounded-lg font-bold text-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
                 Proceed to Checkout
               </button>
               <button
                 onClick={onClose}
-                className="w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors"
+                className="w-full bg-gray-600 text-white py-3 px-6 rounded-lg hover:bg-gray-700 transition-colors"
               >
                 Continue Shopping
               </button>
