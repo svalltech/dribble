@@ -3,9 +3,10 @@ import requests
 import json
 import unittest
 import uuid
+import time
 from typing import Dict, Any, List, Optional
 
-# Backend URL from frontend/.env
+# Backend URL from frontend App.js
 BACKEND_URL = "https://cecd11b7-b73d-489a-874b-a29bc1a6d120.preview.emergentagent.com/api"
 
 # Test credentials
