@@ -301,6 +301,8 @@ export const CartModal = ({ onClose }) => {
   const { cart, removeFromCart, fetchCart, updateCartQuantity } = useApp();
   const [localQuantities, setLocalQuantities] = useState({});
   const [updatingItems, setUpdatingItems] = useState({});
+  const [pendingUpdates, setPendingUpdates] = useState({});
+  const debounceTimers = useRef({});
 
   useEffect(() => {
     fetchCart();
@@ -318,6 +320,13 @@ export const CartModal = ({ onClose }) => {
     }
   }, [cart.items]);
 
+  // Cleanup debounce timers on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(debounceTimers.current).forEach(timer => clearTimeout(timer));
+    };
+  }, []);
+
   const handleRemoveItem = async (productId, color, size) => {
     const key = `${productId}-${color}-${size}`;
     setUpdatingItems(prev => ({ ...prev, [key]: true }));
@@ -326,6 +335,7 @@ export const CartModal = ({ onClose }) => {
       await removeFromCart(productId, color, size);
     } catch (error) {
       console.error('Error removing item:', error);
+      toast.error('Failed to remove item from cart');
     } finally {
       setUpdatingItems(prev => ({ ...prev, [key]: false }));
     }
@@ -337,16 +347,29 @@ export const CartModal = ({ onClose }) => {
     
     // Update local state immediately for responsive UI
     setLocalQuantities(prev => ({ ...prev, [key]: quantity }));
+    
+    // Clear any existing timer for this item
+    if (debounceTimers.current[key]) {
+      clearTimeout(debounceTimers.current[key]);
+    }
+    
+    // Set up debounced update (500ms delay)
+    debounceTimers.current[key] = setTimeout(() => {
+      handleDebouncedQuantityUpdate(item, quantity);
+    }, 500);
   };
 
-  const handleQuantityBlur = async (item) => {
+  const handleDebouncedQuantityUpdate = async (item, newQuantity) => {
     const key = `${item.product_id}-${item.color}-${item.size}`;
-    const newQuantity = localQuantities[key];
     const originalQuantity = item.quantity;
     
     // Skip if no change
     if (newQuantity === originalQuantity) return;
     
+    // Skip if already updating this item
+    if (updatingItems[key] || pendingUpdates[key]) return;
+    
+    setPendingUpdates(prev => ({ ...prev, [key]: true }));
     setUpdatingItems(prev => ({ ...prev, [key]: true }));
     
     try {
@@ -361,8 +384,26 @@ export const CartModal = ({ onClose }) => {
       console.error('Error updating quantity:', error);
       // Revert to original quantity on error
       setLocalQuantities(prev => ({ ...prev, [key]: originalQuantity }));
+      toast.error('Failed to update quantity. Please try again.');
     } finally {
       setUpdatingItems(prev => ({ ...prev, [key]: false }));
+      setPendingUpdates(prev => ({ ...prev, [key]: false }));
+    }
+  };
+
+  const handleQuantityBlur = (item) => {
+    const key = `${item.product_id}-${item.color}-${item.size}`;
+    const newQuantity = localQuantities[key];
+    
+    // Clear any pending debounced update and trigger immediate update
+    if (debounceTimers.current[key]) {
+      clearTimeout(debounceTimers.current[key]);
+      delete debounceTimers.current[key];
+    }
+    
+    // Only update if there's a difference and no pending update
+    if (newQuantity !== item.quantity && !pendingUpdates[key]) {
+      handleDebouncedQuantityUpdate(item, newQuantity);
     }
   };
 
@@ -410,6 +451,7 @@ export const CartModal = ({ onClose }) => {
                 const key = `${item.product_id}-${item.color}-${item.size}`;
                 const currentQuantity = localQuantities[key] ?? item.quantity;
                 const isUpdating = updatingItems[key];
+                const isPending = pendingUpdates[key];
                 
                 return (
                   <div key={index} className="bg-gray-50 p-4 rounded-lg border">
@@ -431,11 +473,13 @@ export const CartModal = ({ onClose }) => {
                             value={currentQuantity}
                             onChange={(e) => handleQuantityChange(item, e.target.value)}
                             onBlur={() => handleQuantityBlur(item)}
-                            className="w-20 px-2 py-1 border border-gray-300 rounded text-center"
+                            className="w-20 px-2 py-1 border border-gray-300 rounded text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
                             disabled={isUpdating}
                           />
-                          {isUpdating && (
-                            <span className="text-xs text-blue-600">Updating...</span>
+                          {(isUpdating || isPending) && (
+                            <span className="text-xs text-blue-600">
+                              {isUpdating ? 'Updating...' : 'Pending...'}
+                            </span>
                           )}
                         </div>
                         
@@ -447,7 +491,7 @@ export const CartModal = ({ onClose }) => {
                         {/* Remove Button */}
                         <button
                           onClick={() => handleRemoveItem(item.product_id, item.color, item.size)}
-                          disabled={isUpdating}
+                          disabled={isUpdating || isPending}
                           className="text-red-500 hover:text-red-700 px-3 py-2 rounded-lg border border-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 text-sm"
                         >
                           {isUpdating ? 'Removing...' : 'Remove'}
