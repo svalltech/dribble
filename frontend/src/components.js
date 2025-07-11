@@ -137,6 +137,8 @@ export const AppProvider = ({ children }) => {
       return false;
     }
   };
+
+  const removeFromCart = async (productId, color, size) => {
     try {
       await axios.delete(`${API_URL}/cart/remove/${productId}?color=${color}&size=${size}`);
       await fetchCart();
