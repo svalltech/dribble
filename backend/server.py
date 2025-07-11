@@ -539,8 +539,8 @@ async def get_orders(
 @api_router.get("/orders/{order_id}", response_model=Order)
 async def get_order(
     order_id: str,
-    current_user: Optional[User] = Depends(get_current_user_with_db(Depends(get_database))),
-    database: AsyncIOMotorDatabase = Depends(get_database)
+    database: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: Optional[User] = Depends(get_current_user_db)
 ):
     order = await database.orders.find_one({"id": order_id})
     if not order:
