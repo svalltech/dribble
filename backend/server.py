@@ -281,8 +281,8 @@ async def get_categories(database: AsyncIOMotorDatabase = Depends(get_database))
 @api_router.post("/categories", response_model=Category)
 async def create_category(
     category_data: CategoryCreate,
-    current_user: User = Depends(require_admin),
-    database: AsyncIOMotorDatabase = Depends(get_database)
+    database: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: User = Depends(lambda db=Depends(get_database): require_admin_with_db(db))
 ):
     if not current_user or not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Admin access required")
