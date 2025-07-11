@@ -396,6 +396,97 @@ async def add_to_cart(
     
     return {"message": "Item added to cart"}
 
+@api_router.put("/cart/update")
+async def update_cart_item(
+    cart_item: CartAdd,
+    request: Request,
+    response: Response,
+    current_user: Optional[User] = Depends(get_current_user_db),
+    database: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Update quantity of an item in cart"""
+    try:
+        # Get session ID
+        session_id = get_session_id(request, response)
+        
+        if current_user:
+            cart_filter = {"user_id": current_user.id}
+        else:
+            cart_filter = {"session_id": session_id}
+        
+        # Find existing cart
+        cart = await database.carts.find_one(cart_filter)
+        if not cart:
+            raise HTTPException(status_code=404, detail="Cart not found")
+        
+        # Find the item to update
+        updated = False
+        for item in cart["items"]:
+            if (item["product_id"] == cart_item.product_id and 
+                item["color"] == cart_item.color and 
+                item["size"] == cart_item.size):
+                
+                if cart_item.quantity <= 0:
+                    # Remove item if quantity is 0 or negative
+                    cart["items"].remove(item)
+                else:
+                    # Update quantity
+                    item["quantity"] = cart_item.quantity
+                updated = True
+                break
+        
+        if not updated and cart_item.quantity > 0:
+            # Add new item if it doesn't exist and quantity > 0
+            product = await database.products.find_one({"id": cart_item.product_id})
+            if not product:
+                raise HTTPException(status_code=404, detail="Product not found")
+            
+            # Check if variant exists
+            variant_exists = False
+            for variant in product["variants"]:
+                if variant["color"] == cart_item.color and variant["size"] == cart_item.size:
+                    variant_exists = True
+                    break
+            
+            if not variant_exists:
+                raise HTTPException(status_code=400, detail="Product variant not found")
+            
+            # Calculate pricing
+            total_quantity = sum(item["quantity"] for item in cart["items"]) + cart_item.quantity
+            unit_price = product["bulk_price"] if total_quantity >= 15 else product["base_price"]
+            
+            new_item = {
+                "product_id": cart_item.product_id,
+                "color": cart_item.color,
+                "size": cart_item.size,
+                "quantity": cart_item.quantity,
+                "product_name": product["name"],
+                "product_image": product.get("images", [None])[0],
+                "unit_price": unit_price,
+                "total_price": unit_price * cart_item.quantity
+            }
+            cart["items"].append(new_item)
+        
+        # Recalculate all prices (bulk pricing might have changed)
+        total_quantity = sum(item["quantity"] for item in cart["items"])
+        for item in cart["items"]:
+            product = await database.products.find_one({"id": item["product_id"]})
+            if product:
+                unit_price = product["bulk_price"] if total_quantity >= 15 else product["base_price"]
+                item["unit_price"] = unit_price
+                item["total_price"] = unit_price * item["quantity"]
+        
+        # Update cart in database
+        await database.carts.update_one(
+            cart_filter,
+            {"$set": {"items": cart["items"], "updated_at": datetime.utcnow()}}
+        )
+        
+        return {"message": "Cart updated successfully"}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.delete("/cart/remove/{product_id}")
 async def remove_from_cart(
     product_id: str,
