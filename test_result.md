@@ -698,8 +698,10 @@ metadata:
   run_ui: true
 
 test_plan:
-  current_focus: []
-  stuck_tasks: []
+  current_focus:
+    - "Cart Functionality"
+  stuck_tasks:
+    - "Cart Functionality"
   test_all: false
   test_priority: "high_first"
 
