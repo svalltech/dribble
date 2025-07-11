@@ -271,13 +271,25 @@ export const Header = () => {
 
 // Cart Modal Component
 export const CartModal = ({ onClose }) => {
-  const { cart, removeFromCart, fetchCart, addToCart } = useApp();
+  const { cart, removeFromCart, fetchCart } = useApp();
   const [loading, setLoading] = useState(false);
-  const [updatingItems, setUpdatingItems] = useState({});
+  const [quantities, setQuantities] = useState({});
 
   useEffect(() => {
     fetchCart();
   }, []);
+
+  // Initialize quantities when cart items load
+  useEffect(() => {
+    if (cart.items) {
+      const initialQuantities = {};
+      cart.items.forEach(item => {
+        const key = `${item.product_id}-${item.color}-${item.size}`;
+        initialQuantities[key] = item.quantity;
+      });
+      setQuantities(initialQuantities);
+    }
+  }, [cart.items]);
 
   const handleRemoveItem = async (productId, color, size) => {
     setLoading(true);
@@ -285,26 +297,44 @@ export const CartModal = ({ onClose }) => {
     setLoading(false);
   };
 
-  const handleQuantityChange = async (item, newQuantity) => {
-    if (newQuantity < 1) return;
+  const handleQuantityInputChange = (item, value) => {
+    const key = `${item.product_id}-${item.color}-${item.size}`;
+    const newQuantity = parseInt(value) || 0;
+    if (newQuantity >= 0) {
+      setQuantities(prev => ({ ...prev, [key]: newQuantity }));
+    }
+  };
+
+  const handleUpdateQuantity = async (item) => {
+    const key = `${item.product_id}-${item.color}-${item.size}`;
+    const newQuantity = quantities[key];
     
-    const itemKey = `${item.product_id}-${item.color}-${item.size}`;
-    setUpdatingItems(prev => ({ ...prev, [itemKey]: true }));
+    if (newQuantity === item.quantity) return; // No change
     
+    if (newQuantity === 0) {
+      await handleRemoveItem(item.product_id, item.color, item.size);
+      return;
+    }
+
+    setLoading(true);
     try {
-      // Remove the current item completely
+      // For now, we'll use the existing API approach but with better error handling
       await removeFromCart(item.product_id, item.color, item.size);
       
-      // Add it back with new quantity
       if (newQuantity > 0) {
+        const { addToCart } = useApp();
         await addToCart(item.product_id, item.color, item.size, newQuantity);
       }
       
       await fetchCart();
+      toast.success('Quantity updated');
     } catch (error) {
+      console.error('Error updating quantity:', error);
       toast.error('Failed to update quantity');
+      // Revert to original quantity
+      setQuantities(prev => ({ ...prev, [key]: item.quantity }));
     } finally {
-      setUpdatingItems(prev => ({ ...prev, [itemKey]: false }));
+      setLoading(false);
     }
   };
 
@@ -349,8 +379,8 @@ export const CartModal = ({ onClose }) => {
           ) : (
             <div className="space-y-4">
               {cartItems.map((item, index) => {
-                const itemKey = `${item.product_id}-${item.color}-${item.size}`;
-                const isUpdating = updatingItems[itemKey];
+                const key = `${item.product_id}-${item.color}-${item.size}`;
+                const currentQuantity = quantities[key] || item.quantity;
                 
                 return (
                   <div key={index} className="bg-gray-50 p-4 rounded-lg border">
@@ -364,35 +394,28 @@ export const CartModal = ({ onClose }) => {
                       
                       {/* Quantity Controls */}
                       <div className="flex items-center gap-3">
-                        <div className="flex items-center border border-gray-300 rounded-lg bg-white">
-                          <button
-                            onClick={() => handleQuantityChange(item, item.quantity - 1)}
-                            disabled={isUpdating || item.quantity <= 1}
-                            className="px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          >
-                            −
-                          </button>
-                          <span className="px-4 py-2 font-medium min-w-[60px] text-center">
-                            {isUpdating ? '...' : item.quantity}
-                          </span>
-                          <button
-                            onClick={() => handleQuantityChange(item, item.quantity + 1)}
-                            disabled={isUpdating}
-                            className="px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          >
-                            +
-                          </button>
+                        <div className="flex items-center gap-2">
+                          <label className="text-sm font-medium">Qty:</label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={currentQuantity}
+                            onChange={(e) => handleQuantityInputChange(item, e.target.value)}
+                            onBlur={() => handleUpdateQuantity(item)}
+                            className="w-20 px-2 py-1 border border-gray-300 rounded text-center"
+                            disabled={loading}
+                          />
                         </div>
                         
                         {/* Item Total */}
                         <div className="text-right">
-                          <p className="font-bold text-lg">₹{(item.unit_price * item.quantity).toFixed(2)}</p>
+                          <p className="font-bold text-lg">₹{(item.unit_price * currentQuantity).toFixed(2)}</p>
                         </div>
                         
                         {/* Remove Button */}
                         <button
                           onClick={() => handleRemoveItem(item.product_id, item.color, item.size)}
-                          disabled={loading || isUpdating}
+                          disabled={loading}
                           className="text-red-500 hover:text-red-700 px-3 py-2 rounded-lg border border-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 text-sm"
                         >
                           Remove
