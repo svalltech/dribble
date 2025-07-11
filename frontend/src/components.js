@@ -134,7 +134,7 @@ export const AppProvider = ({ children }) => {
     } catch (error) {
       console.error('Error updating cart quantity:', error);
       toast.error(error.response?.data?.detail || 'Failed to update quantity');
-      return false;
+      throw error; // Re-throw to allow proper error handling in components
     }
   };
 
