@@ -138,10 +138,7 @@ export const AppProvider = ({ children }) => {
     }
   };
     try {
-      const token = localStorage.getItem('token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      
-      await axios.delete(`${API_URL}/cart/remove/${productId}?color=${color}&size=${size}`, { headers });
+      await axios.delete(`${API_URL}/cart/remove/${productId}?color=${color}&size=${size}`);
       await fetchCart();
       toast.success('Removed from cart');
     } catch (error) {
