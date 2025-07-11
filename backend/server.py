@@ -219,8 +219,8 @@ async def update_product_sizechart(
 @api_router.post("/products", response_model=Product)
 async def create_product(
     product_data: ProductCreate,
-    current_user: User = Depends(require_admin),
-    database: AsyncIOMotorDatabase = Depends(get_database)
+    database: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: User = Depends(lambda db=Depends(get_database): require_admin_with_db(db))
 ):
     if not current_user or not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Admin access required")
@@ -233,8 +233,8 @@ async def create_product(
 async def update_product(
     product_id: str,
     product_data: ProductUpdate,
-    current_user: User = Depends(require_admin),
-    database: AsyncIOMotorDatabase = Depends(get_database)
+    database: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: User = Depends(lambda db=Depends(get_database): require_admin_with_db(db))
 ):
     if not current_user or not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Admin access required")
@@ -256,8 +256,8 @@ async def update_product(
 @api_router.delete("/products/{product_id}")
 async def delete_product(
     product_id: str,
-    current_user: User = Depends(require_admin),
-    database: AsyncIOMotorDatabase = Depends(get_database)
+    database: AsyncIOMotorDatabase = Depends(get_database),
+    current_user: User = Depends(lambda db=Depends(get_database): require_admin_with_db(db))
 ):
     if not current_user or not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Admin access required")
