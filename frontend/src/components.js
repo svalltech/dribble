@@ -78,29 +78,35 @@ export const AppProvider = ({ children }) => {
   // Cart operations
   const fetchCart = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const response = await axios.get(`${API_URL}/cart`, { headers });
+      const response = await axios.get(`${API_URL}/cart`);
       setCart(response.data);
     } catch (error) {
       console.error('Error fetching cart:', error);
     }
   };
 
-  const addToCart = async (productId, color, size, quantity = 1) => {
+  const addToCart = async (productId, color, size, quantity) => {
     try {
-      const token = localStorage.getItem('token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      
-      await axios.post(`${API_URL}/cart/add`, {
+      const response = await axios.post(`${API_URL}/cart/add`, {
         product_id: productId,
         color,
         size,
         quantity
-      }, { headers });
+      });
       
-      await fetchCart();
-      return true;
+      if (response.data) {
+        await fetchCart();
+        toast.success('Added to cart!');
+        
+        // Trigger cart update events
+        setTimeout(() => {
+          window.dispatchEvent(new Event('cartUpdated'));
+          localStorage.setItem('cartUpdate', Date.now().toString());
+        }, 100);
+        
+        return true;
+      }
+      return false;
     } catch (error) {
       console.error('Error adding to cart:', error);
       toast.error(error.response?.data?.detail || 'Failed to add to cart');
