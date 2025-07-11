@@ -174,7 +174,7 @@ export const Header = () => {
     
     // Listen for cart updates
     const handleCartUpdate = () => {
-      setTimeout(() => fetchCart(), 100);
+      fetchCart();
     };
     
     // Set up multiple listeners for cart updates
@@ -188,10 +188,10 @@ export const Header = () => {
     };
     window.addEventListener('storage', handleStorageChange);
     
-    // Periodic refresh to ensure cart stays in sync
+    // More frequent refresh to ensure cart stays in sync
     const intervalId = setInterval(() => {
       fetchCart();
-    }, 10000); // Every 10 seconds
+    }, 3000); // Every 3 seconds
     
     return () => {
       window.removeEventListener('cartUpdated', handleCartUpdate);
