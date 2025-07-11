@@ -407,7 +407,7 @@ async def update_cart_item(
     """Update quantity of an item in cart"""
     try:
         # Get session ID
-        session_id = get_session_id(request, response)
+        session_id = get_session_id(request)
         
         if current_user:
             cart_filter = {"user_id": current_user.id}
