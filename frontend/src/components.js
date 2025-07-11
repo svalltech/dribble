@@ -298,25 +298,12 @@ export const Header = () => {
 
 // Cart Modal Component
 export const CartModal = ({ onClose }) => {
-  const { cart, removeFromCart, fetchCart, addToCart } = useApp();
+  const { cart, removeFromCart, fetchCart, updateCartQuantity } = useApp();
   const [loading, setLoading] = useState(false);
-  const [quantities, setQuantities] = useState({});
 
   useEffect(() => {
     fetchCart();
   }, []);
-
-  // Initialize quantities when cart items load
-  useEffect(() => {
-    if (cart.items) {
-      const initialQuantities = {};
-      cart.items.forEach(item => {
-        const key = `${item.product_id}-${item.color}-${item.size}`;
-        initialQuantities[key] = item.quantity;
-      });
-      setQuantities(initialQuantities);
-    }
-  }, [cart.items]);
 
   const handleRemoveItem = async (productId, color, size) => {
     setLoading(true);
@@ -324,44 +311,17 @@ export const CartModal = ({ onClose }) => {
     setLoading(false);
   };
 
-  const handleQuantityInputChange = (item, value) => {
-    const key = `${item.product_id}-${item.color}-${item.size}`;
-    const newQuantity = parseInt(value) || 0;
-    if (newQuantity >= 0) {
-      setQuantities(prev => ({ ...prev, [key]: newQuantity }));
-    }
-  };
-
-  const handleUpdateQuantity = async (item) => {
-    const key = `${item.product_id}-${item.color}-${item.size}`;
-    const newQuantity = quantities[key];
+  const handleQuantityChange = async (item, newQuantity) => {
+    const quantity = parseInt(newQuantity);
+    if (quantity < 0) return;
     
-    if (newQuantity === item.quantity) return; // No change
-    
-    if (newQuantity === 0) {
-      await handleRemoveItem(item.product_id, item.color, item.size);
-      return;
-    }
-
     setLoading(true);
-    try {
-      // For now, we'll use the existing API approach but with better error handling
+    if (quantity === 0) {
       await removeFromCart(item.product_id, item.color, item.size);
-      
-      if (newQuantity > 0) {
-        await addToCart(item.product_id, item.color, item.size, newQuantity);
-      }
-      
-      await fetchCart();
-      toast.success('Quantity updated');
-    } catch (error) {
-      console.error('Error updating quantity:', error);
-      toast.error('Failed to update quantity');
-      // Revert to original quantity
-      setQuantities(prev => ({ ...prev, [key]: item.quantity }));
-    } finally {
-      setLoading(false);
+    } else {
+      await updateCartQuantity(item.product_id, item.color, item.size, quantity);
     }
+    setLoading(false);
   };
 
   const handleCheckout = () => {
@@ -404,53 +364,47 @@ export const CartModal = ({ onClose }) => {
             </div>
           ) : (
             <div className="space-y-4">
-              {cartItems.map((item, index) => {
-                const key = `${item.product_id}-${item.color}-${item.size}`;
-                const currentQuantity = quantities[key] || item.quantity;
-                
-                return (
-                  <div key={index} className="bg-gray-50 p-4 rounded-lg border">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      {/* Product Info */}
-                      <div className="flex-1">
-                        <h3 className="font-medium text-lg">{item.product_name || 'Product'}</h3>
-                        <p className="text-sm text-gray-600">{item.color} - {item.size}</p>
-                        <p className="text-sm font-medium text-green-600">₹{item.unit_price} per piece</p>
+              {cartItems.map((item, index) => (
+                <div key={index} className="bg-gray-50 p-4 rounded-lg border">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    {/* Product Info */}
+                    <div className="flex-1">
+                      <h3 className="font-medium text-lg">{item.product_name || 'Product'}</h3>
+                      <p className="text-sm text-gray-600">{item.color} - {item.size}</p>
+                      <p className="text-sm font-medium text-green-600">₹{item.unit_price} per piece</p>
+                    </div>
+                    
+                    {/* Quantity Controls */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium">Qty:</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={item.quantity}
+                          onChange={(e) => handleQuantityChange(item, e.target.value)}
+                          className="w-20 px-2 py-1 border border-gray-300 rounded text-center"
+                          disabled={loading}
+                        />
                       </div>
                       
-                      {/* Quantity Controls */}
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2">
-                          <label className="text-sm font-medium">Qty:</label>
-                          <input
-                            type="number"
-                            min="0"
-                            value={currentQuantity}
-                            onChange={(e) => handleQuantityInputChange(item, e.target.value)}
-                            onBlur={() => handleUpdateQuantity(item)}
-                            className="w-20 px-2 py-1 border border-gray-300 rounded text-center"
-                            disabled={loading}
-                          />
-                        </div>
-                        
-                        {/* Item Total */}
-                        <div className="text-right">
-                          <p className="font-bold text-lg">₹{(item.unit_price * currentQuantity).toFixed(2)}</p>
-                        </div>
-                        
-                        {/* Remove Button */}
-                        <button
-                          onClick={() => handleRemoveItem(item.product_id, item.color, item.size)}
-                          disabled={loading}
-                          className="text-red-500 hover:text-red-700 px-3 py-2 rounded-lg border border-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 text-sm"
-                        >
-                          Remove
-                        </button>
+                      {/* Item Total */}
+                      <div className="text-right">
+                        <p className="font-bold text-lg">₹{(item.unit_price * item.quantity).toFixed(2)}</p>
                       </div>
+                      
+                      {/* Remove Button */}
+                      <button
+                        onClick={() => handleRemoveItem(item.product_id, item.color, item.size)}
+                        disabled={loading}
+                        className="text-red-500 hover:text-red-700 px-3 py-2 rounded-lg border border-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 text-sm"
+                      >
+                        Remove
+                      </button>
                     </div>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           )}
         </div>
