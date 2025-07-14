@@ -248,4 +248,25 @@ class OrderSummary(BaseModel):
     tax_amount: float
     shipping_amount: float
     total_amount: float
+
+# Razorpay Models
+class RazorpayOrderCreate(BaseModel):
+    amount: float
+    currency: str = "INR"
+    receipt: str
+    customer_details: dict
+    cart_items: List[CartItem]
+
+class PaymentVerification(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+
+class CheckoutRequest(BaseModel):
+    customer_name: str
+    customer_email: EmailStr
+    customer_phone: str
+    shipping_address: AddressCreate
+    billing_address: Optional[AddressCreate] = None
+    notes: Optional[str] = None
     is_bulk_order: bool
