@@ -406,6 +406,23 @@ async def update_cart_item(
 ):
     """Update quantity of an item in cart"""
     try:
+        # First validate stock availability
+        product = await database.products.find_one({"id": cart_item.product_id, "is_active": True})
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        # Check if variant exists and get stock quantity
+        variant = next((v for v in product["variants"] if v["color"] == cart_item.color and v["size"] == cart_item.size), None)
+        if not variant:
+            raise HTTPException(status_code=400, detail="Product variant not found")
+        
+        # Check stock availability
+        if cart_item.quantity > variant["stock_quantity"]:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Insufficient stock. Only {variant['stock_quantity']} units available"
+            )
+        
         # Get session ID
         session_id = get_session_id(request)
         
@@ -437,20 +454,6 @@ async def update_cart_item(
         
         if not updated and cart_item.quantity > 0:
             # Add new item if it doesn't exist and quantity > 0
-            product = await database.products.find_one({"id": cart_item.product_id})
-            if not product:
-                raise HTTPException(status_code=404, detail="Product not found")
-            
-            # Check if variant exists
-            variant_exists = False
-            for variant in product["variants"]:
-                if variant["color"] == cart_item.color and variant["size"] == cart_item.size:
-                    variant_exists = True
-                    break
-            
-            if not variant_exists:
-                raise HTTPException(status_code=400, detail="Product variant not found")
-            
             # Calculate pricing
             total_quantity = sum(item["quantity"] for item in cart["items"]) + cart_item.quantity
             unit_price = product["bulk_price"] if total_quantity >= 15 else product["base_price"]
@@ -485,6 +488,8 @@ async def update_cart_item(
         return {"message": "Cart updated successfully"}
     
     except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.delete("/cart/remove/{product_id}")
