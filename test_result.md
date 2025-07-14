@@ -252,6 +252,90 @@ backend:
         agent: "testing"
         comment: "API security is working correctly. Unauthorized access to protected endpoints is properly prevented. Admin-only endpoint security is correctly enforced, preventing regular users from accessing admin functions. Input validation is working as expected, rejecting invalid data formats and values."
 
+  - task: "Razorpay Payment Order Creation"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "RAZORPAY PAYMENT ORDER CREATION TESTING COMPLETED: Successfully tested POST /api/payment/create-order endpoint with comprehensive validation. ✅ ORDER CREATION FLOW: Successfully creates Razorpay orders from cart items with proper customer details, shipping address, and order calculations. ✅ RAZORPAY INTEGRATION: Correctly integrates with Razorpay API using test credentials (rzp_test_Cdvju2JtE2XIQl) and generates valid Razorpay order IDs. ✅ ORDER CALCULATIONS: Properly calculates subtotal, tax (18% GST), shipping (free above ₹500), and total amounts. Example: 5 items at ₹319 each = ₹1595 subtotal, ₹287.1 tax, ₹0 shipping = ₹1882.1 total. ✅ RESPONSE STRUCTURE: Returns complete order details including order_id, razorpay_order_id, amount, currency (INR), key_id, customer_details, and order_details. ✅ CART INTEGRATION: Successfully reads cart items from session/user context and converts to order items with proper pricing. ✅ DATABASE STORAGE: Creates order record in database with pending status for tracking. Payment order creation is working correctly and ready for production use."
+
+  - task: "Razorpay Payment Verification"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "RAZORPAY PAYMENT VERIFICATION TESTING COMPLETED: Successfully tested POST /api/payment/verify endpoint with comprehensive security validation. ✅ SIGNATURE VALIDATION: Correctly validates Razorpay payment signatures using HMAC-SHA256 with secret key. Invalid signatures are properly rejected with 400 status and 'Invalid payment signature' error. ✅ ORDER VALIDATION: Properly validates that orders exist in database before processing verification. Non-existent orders return appropriate error responses. ✅ ORDER STATUS UPDATES: Successfully updates order status to 'confirmed' and payment status to 'completed' after successful verification. Sets payment_id and updated_at timestamp. ✅ CART CLEARING: Implements cart clearing logic for authenticated users after successful payment verification. ✅ SECURITY MEASURES: Implements proper cryptographic signature verification to prevent payment fraud. Uses environment variable RAZORPAY_KEY_SECRET for secure validation. ✅ ERROR HANDLING: Provides clear error messages for various failure scenarios while maintaining security. Payment verification is working correctly with robust security measures and is production-ready."
+
+  - task: "Razorpay Payment Webhooks"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "RAZORPAY PAYMENT WEBHOOKS TESTING COMPLETED: Successfully tested POST /api/payment/webhook endpoint with comprehensive event handling. ✅ WEBHOOK SIGNATURE VALIDATION: Properly validates webhook signatures when RAZORPAY_WEBHOOK_SECRET is configured. Missing signatures are correctly rejected with 400 status and 'Missing webhook signature' error. ✅ EVENT PROCESSING: Successfully processes payment.captured events by updating order status to 'confirmed' and payment status to 'completed'. Handles payment.failed events by updating status to 'cancelled' and payment status to 'failed'. ✅ ORDER UPDATES: Correctly updates order records in database based on webhook events, setting payment_id and updated_at timestamps. ✅ SECURITY MEASURES: Implements optional webhook signature verification using HMAC-SHA256 for enhanced security. ✅ ERROR HANDLING: Graceful error handling with proper logging and appropriate HTTP status codes. Returns 'processed' status for successful webhook processing. ✅ PRODUCTION READY: Webhook endpoint is robust and handles various Razorpay events correctly. Payment webhook processing is working correctly and ready for production use."
+
+  - task: "Bulk Pricing in Payment Orders"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "BULK PRICING IN PAYMENT ORDERS TESTING COMPLETED: Successfully tested bulk pricing logic integration with Razorpay payment system. ✅ BULK PRICING CALCULATION: Correctly applies bulk pricing (₹279) for orders with 15+ items vs regular pricing (₹319) for smaller orders. Example: 15 items at bulk price = ₹4185 subtotal vs ₹4785 at regular price. ✅ CART INTEGRATION: Properly calculates total quantities across all cart items to determine bulk pricing eligibility. ✅ ORDER CREATION: Successfully creates payment orders with correct bulk pricing applied to all items in the order. ✅ PRICE CONSISTENCY: Ensures all items in bulk orders receive the same bulk unit price (₹279) regardless of individual item quantities. ✅ TOTAL CALCULATIONS: Correctly calculates final order totals including tax and shipping with bulk pricing. Example: 15 items = ₹4185 + ₹753.3 tax + ₹0 shipping = ₹4938.3 total. ✅ RAZORPAY INTEGRATION: Bulk pricing calculations are properly passed to Razorpay order creation with correct amounts. Bulk pricing logic in payment orders is working correctly and provides proper cost savings for large orders."
+
+  - task: "Payment Integration with Cart System"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "PAYMENT INTEGRATION WITH CART SYSTEM TESTING COMPLETED: Successfully tested complete integration between cart operations and payment processing. ✅ CART TO ORDER CONVERSION: Successfully converts cart items to order items with proper product details, quantities, and pricing. Maintains product names, colors, sizes, and calculates correct totals. ✅ SESSION MANAGEMENT: Properly handles both authenticated user carts (user_id) and anonymous carts (session_id) during payment order creation. ✅ STOCK VALIDATION: Integrates with stock validation system to prevent payment orders for out-of-stock items. Returns appropriate error messages when stock is insufficient. ✅ CART PRESERVATION: Cart items are preserved during order creation and only cleared after successful payment verification, preventing data loss on payment failures. ✅ MULTI-ITEM SUPPORT: Successfully handles multiple items in cart with different colors, sizes, and quantities. Example: 3 Black S + 2 White M items processed correctly. ✅ PRICING CONSISTENCY: Ensures pricing in payment orders matches cart calculations including bulk pricing logic. Cart integration with payment system is working correctly and provides seamless user experience from cart to payment completion."
+
+  - task: "Order Status Updates via Payment Flow"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "ORDER STATUS UPDATES VIA PAYMENT FLOW TESTING COMPLETED: Successfully tested automatic order status management throughout the payment lifecycle. ✅ INITIAL ORDER STATUS: Orders are created with 'pending' status and 'pending' payment status when payment order is created. ✅ WEBHOOK STATUS UPDATES: Successfully processes payment.captured webhooks to update order status to 'confirmed' and payment status to 'completed'. Handles payment.failed webhooks by updating to 'cancelled' and 'failed' respectively. ✅ PAYMENT ID TRACKING: Correctly sets payment_id field when payment is captured, enabling order tracking and reconciliation. ✅ TIMESTAMP MANAGEMENT: Properly updates updated_at timestamp on all status changes for audit trail. ✅ DATABASE CONSISTENCY: All status updates are properly persisted to MongoDB with correct field updates. ✅ ADMIN ACCESS: Order status can be retrieved by admin users for monitoring and management purposes. Order status update system is working correctly and provides proper order lifecycle management throughout the payment process."
+
+  - task: "Stock Validation During Payment Orders"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "STOCK VALIDATION DURING PAYMENT ORDERS TESTING COMPLETED: Successfully tested stock validation integration with payment order creation process. ✅ STOCK CHECKING: Payment order creation properly validates stock availability for all cart items before creating Razorpay orders. Prevents payment orders for out-of-stock items. ✅ ERROR HANDLING: Returns clear error messages when attempting to create payment orders with insufficient stock. Example: 'Insufficient stock' error when requesting 60 items but only 50 available. ✅ VALID ORDER PROCESSING: Successfully creates payment orders when stock is sufficient. Example: 5 items requested from 50 available stock processes correctly. ✅ STOCK ENDPOINT INTEGRATION: Utilizes GET /api/products/{product_id}/stock endpoint to retrieve current stock levels for validation. ✅ VARIANT-SPECIFIC VALIDATION: Correctly validates stock for specific color/size combinations, not just product-level stock. ✅ PREVENTION OF OVERSELLING: Stock validation prevents overselling by blocking payment order creation when stock is insufficient. Stock validation during payment orders is working correctly and prevents inventory issues in the payment flow."
+
 frontend:
   - task: "Header and Navigation"
     implemented: true
