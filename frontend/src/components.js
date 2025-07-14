@@ -1098,6 +1098,7 @@ export const SizeChart = ({ productId, selectedCategory }) => {
 
   useEffect(() => {
     const fetchProductData = async () => {
+      setIsLoading(true);
       try {
         let productToLoad = null;
         
@@ -1182,6 +1183,8 @@ export const SizeChart = ({ productId, selectedCategory }) => {
           });
         });
         setInventory(demoInventory);
+      } finally {
+        setIsLoading(false);
       }
     };
     
