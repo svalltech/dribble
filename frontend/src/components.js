@@ -251,10 +251,43 @@ export const AppProvider = ({ children }) => {
 
   const removeFromCart = async (productId, color, size) => {
     try {
+      // Update UI immediately
+      const updatedCart = { ...cart };
+      const itemIndex = updatedCart.items.findIndex(item => 
+        item.product_id === productId && 
+        item.color === color && 
+        item.size === size
+      );
+      
+      if (itemIndex !== -1) {
+        // Remove item from local cart
+        updatedCart.items.splice(itemIndex, 1);
+        
+        // Recalculate total
+        updatedCart.total = updatedCart.items.reduce((sum, item) => sum + item.total_price, 0);
+        
+        // Update cart state immediately
+        setCart(updatedCart);
+        
+        // Show success message immediately
+        toast.success('Removed from cart');
+        
+        // Trigger cart update events
+        window.dispatchEvent(new Event('cartUpdated'));
+        localStorage.setItem('cartUpdate', Date.now().toString());
+      }
+      
+      // Send to backend
       await axios.delete(`${API_URL}/cart/remove/${productId}?color=${color}&size=${size}`);
-      await fetchCart();
-      toast.success('Removed from cart');
+      
+      // Sync with backend after short delay
+      setTimeout(() => fetchCart(), 200);
+      
     } catch (error) {
+      console.error('Error removing from cart:', error);
+      
+      // Revert on error
+      await fetchCart();
       toast.error('Failed to remove from cart');
     }
   };
