@@ -124,15 +124,48 @@ export const AppProvider = ({ children }) => {
       });
       
       if (response.data) {
-        await fetchCart();
-        // Trigger cart update events
+        // Don't wait for fetchCart - update locally first for instant UI
+        const updatedCart = { ...cart };
+        
+        // Find and update the item in local cart
+        const itemIndex = updatedCart.items.findIndex(item => 
+          item.product_id === productId && 
+          item.color === color && 
+          item.size === size
+        );
+        
+        if (itemIndex !== -1) {
+          if (quantity <= 0) {
+            // Remove item if quantity is 0
+            updatedCart.items.splice(itemIndex, 1);
+          } else {
+            // Update quantity and recalculate totals
+            updatedCart.items[itemIndex].quantity = quantity;
+            updatedCart.items[itemIndex].total_price = updatedCart.items[itemIndex].unit_price * quantity;
+          }
+          
+          // Recalculate cart total
+          updatedCart.total = updatedCart.items.reduce((sum, item) => sum + item.total_price, 0);
+          
+          // Update cart state immediately
+          setCart(updatedCart);
+        }
+        
+        // Trigger cart update events immediately
         window.dispatchEvent(new Event('cartUpdated'));
         localStorage.setItem('cartUpdate', Date.now().toString());
+        
+        // Fetch from server in background to sync
+        setTimeout(() => fetchCart(), 100);
+        
         return true;
       }
       return false;
     } catch (error) {
       console.error('Error updating cart quantity:', error);
+      
+      // Refresh cart on error to ensure consistency
+      await fetchCart();
       toast.error(error.response?.data?.detail || 'Failed to update quantity');
       throw error; // Re-throw to allow proper error handling in components
     }
