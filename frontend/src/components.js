@@ -301,7 +301,9 @@ export const CartModal = ({ onClose }) => {
   const { cart, removeFromCart, fetchCart, updateCartQuantity } = useApp();
   const [localQuantities, setLocalQuantities] = useState({});
   const [updatingItems, setUpdatingItems] = useState({});
-  const [pendingUpdates, setPendingUpdates] = useState({});
+  const [stockInfo, setStockInfo] = useState({});
+  const [showStockModal, setShowStockModal] = useState(false);
+  const [stockModalData, setStockModalData] = useState(null);
   const debounceTimers = useRef({});
 
   useEffect(() => {
@@ -317,6 +319,9 @@ export const CartModal = ({ onClose }) => {
         quantities[key] = item.quantity;
       });
       setLocalQuantities(quantities);
+      
+      // Fetch stock info for all cart items
+      fetchStockInfo();
     }
   }, [cart.items]);
 
@@ -326,6 +331,25 @@ export const CartModal = ({ onClose }) => {
       Object.values(debounceTimers.current).forEach(timer => clearTimeout(timer));
     };
   }, []);
+
+  const fetchStockInfo = async () => {
+    if (!cart.items || cart.items.length === 0) return;
+    
+    const stockData = {};
+    for (const item of cart.items) {
+      try {
+        const response = await axios.get(`${API_URL}/products/${item.product_id}/stock`);
+        const variantKey = `${item.color}-${item.size}`;
+        if (response.data.variants[variantKey]) {
+          const key = `${item.product_id}-${item.color}-${item.size}`;
+          stockData[key] = response.data.variants[variantKey].stock_quantity;
+        }
+      } catch (error) {
+        console.error('Error fetching stock info:', error);
+      }
+    }
+    setStockInfo(stockData);
+  };
 
   const handleRemoveItem = async (productId, color, size) => {
     const key = `${productId}-${color}-${size}`;
@@ -344,8 +368,22 @@ export const CartModal = ({ onClose }) => {
   const handleQuantityChange = (item, newQuantity) => {
     const key = `${item.product_id}-${item.color}-${item.size}`;
     const quantity = Math.max(0, parseInt(newQuantity) || 0);
+    const availableStock = stockInfo[key] || 0;
     
-    // Update local state immediately for responsive UI
+    // Check if quantity exceeds available stock
+    if (quantity > availableStock) {
+      setStockModalData({
+        productName: item.product_name,
+        color: item.color,
+        size: item.size,
+        availableStock: availableStock,
+        requestedQuantity: quantity
+      });
+      setShowStockModal(true);
+      return; // Don't update if exceeds stock
+    }
+    
+    // Update local state immediately for instant UI response
     setLocalQuantities(prev => ({ ...prev, [key]: quantity }));
     
     // Clear any existing timer for this item
@@ -353,10 +391,10 @@ export const CartModal = ({ onClose }) => {
       clearTimeout(debounceTimers.current[key]);
     }
     
-    // Set up debounced update (500ms delay)
+    // Set up debounced update (300ms delay for faster response)
     debounceTimers.current[key] = setTimeout(() => {
       handleDebouncedQuantityUpdate(item, quantity);
-    }, 500);
+    }, 300);
   };
 
   const handleDebouncedQuantityUpdate = async (item, newQuantity) => {
@@ -367,9 +405,8 @@ export const CartModal = ({ onClose }) => {
     if (newQuantity === originalQuantity) return;
     
     // Skip if already updating this item
-    if (updatingItems[key] || pendingUpdates[key]) return;
+    if (updatingItems[key]) return;
     
-    setPendingUpdates(prev => ({ ...prev, [key]: true }));
     setUpdatingItems(prev => ({ ...prev, [key]: true }));
     
     try {
@@ -382,12 +419,28 @@ export const CartModal = ({ onClose }) => {
       }
     } catch (error) {
       console.error('Error updating quantity:', error);
+      
+      // Check if it's a stock error
+      if (error.response?.status === 400 && error.response?.data?.detail?.includes('stock')) {
+        const stockMatch = error.response.data.detail.match(/Only (\d+) units available/);
+        const availableStock = stockMatch ? parseInt(stockMatch[1]) : 0;
+        
+        setStockModalData({
+          productName: item.product_name,
+          color: item.color,
+          size: item.size,
+          availableStock: availableStock,
+          requestedQuantity: newQuantity
+        });
+        setShowStockModal(true);
+      } else {
+        toast.error('Failed to update quantity. Please try again.');
+      }
+      
       // Revert to original quantity on error
       setLocalQuantities(prev => ({ ...prev, [key]: originalQuantity }));
-      toast.error('Failed to update quantity. Please try again.');
     } finally {
       setUpdatingItems(prev => ({ ...prev, [key]: false }));
-      setPendingUpdates(prev => ({ ...prev, [key]: false }));
     }
   };
 
@@ -402,7 +455,7 @@ export const CartModal = ({ onClose }) => {
     }
     
     // Only update if there's a difference and no pending update
-    if (newQuantity !== item.quantity && !pendingUpdates[key]) {
+    if (newQuantity !== item.quantity && !updatingItems[key]) {
       handleDebouncedQuantityUpdate(item, newQuantity);
     }
   };
@@ -419,116 +472,158 @@ export const CartModal = ({ onClose }) => {
   const cartTotal = cart.total || 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="fixed inset-0 bg-black bg-opacity-50" onClick={onClose}></div>
-      <div className="w-full max-w-3xl bg-white rounded-lg shadow-xl relative max-h-[85vh] overflow-hidden mx-4">
-        <div className="p-6 border-b">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Shopping Cart</h2>
-            <button 
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 text-2xl"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-        
-        <div className="p-6 overflow-y-auto max-h-[60vh]">
-          {cartItems.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500 text-lg">Your cart is empty</p>
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black bg-opacity-50" onClick={onClose}></div>
+        <div className="w-full max-w-3xl bg-white rounded-lg shadow-xl relative max-h-[85vh] overflow-hidden mx-4">
+          <div className="p-6 border-b">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold">Shopping Cart</h2>
               <button 
                 onClick={onClose}
-                className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                className="text-gray-500 hover:text-gray-700 text-2xl"
               >
-                Continue Shopping
+                ✕
               </button>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {cartItems.map((item, index) => {
-                const key = `${item.product_id}-${item.color}-${item.size}`;
-                const currentQuantity = localQuantities[key] ?? item.quantity;
-                const isUpdating = updatingItems[key];
-                const isPending = pendingUpdates[key];
-                
-                return (
-                  <div key={index} className="bg-gray-50 p-4 rounded-lg border">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      {/* Product Info */}
-                      <div className="flex-1">
-                        <h3 className="font-medium text-lg">{item.product_name || 'Product'}</h3>
-                        <p className="text-sm text-gray-600">{item.color} - {item.size}</p>
-                        <p className="text-sm font-medium text-green-600">₹{item.unit_price} per piece</p>
-                      </div>
-                      
-                      {/* Quantity Controls */}
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2">
-                          <label className="text-sm font-medium">Qty:</label>
-                          <input
-                            type="number"
-                            min="0"
-                            value={currentQuantity}
-                            onChange={(e) => handleQuantityChange(item, e.target.value)}
-                            onBlur={() => handleQuantityBlur(item)}
-                            className="w-20 px-2 py-1 border border-gray-300 rounded text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            disabled={isUpdating}
-                          />
-                          {(isUpdating || isPending) && (
-                            <span className="text-xs text-blue-600">
-                              {isUpdating ? 'Updating...' : 'Pending...'}
-                            </span>
+          </div>
+          
+          <div className="p-6 overflow-y-auto max-h-[60vh]">
+            {cartItems.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500 text-lg">Your cart is empty</p>
+                <button 
+                  onClick={onClose}
+                  className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Continue Shopping
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {cartItems.map((item, index) => {
+                  const key = `${item.product_id}-${item.color}-${item.size}`;
+                  const currentQuantity = localQuantities[key] ?? item.quantity;
+                  const isUpdating = updatingItems[key];
+                  const availableStock = stockInfo[key] || 0;
+                  
+                  return (
+                    <div key={index} className="bg-gray-50 p-4 rounded-lg border hover:bg-gray-100 transition-colors">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        {/* Product Info */}
+                        <div className="flex-1">
+                          <h3 className="font-medium text-lg">{item.product_name || 'Product'}</h3>
+                          <p className="text-sm text-gray-600">{item.color} - {item.size}</p>
+                          <p className="text-sm font-medium text-green-600">₹{item.unit_price} per piece</p>
+                          {availableStock > 0 && (
+                            <p className="text-xs text-blue-600">Stock: {availableStock} units available</p>
                           )}
                         </div>
                         
-                        {/* Item Total */}
-                        <div className="text-right">
-                          <p className="font-bold text-lg">₹{(item.unit_price * currentQuantity).toFixed(2)}</p>
+                        {/* Quantity Controls */}
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
+                            <label className="text-sm font-medium">Qty:</label>
+                            <input
+                              type="number"
+                              min="0"
+                              max={availableStock}
+                              value={currentQuantity}
+                              onChange={(e) => handleQuantityChange(item, e.target.value)}
+                              onBlur={() => handleQuantityBlur(item)}
+                              className="w-20 px-2 py-1 border border-gray-300 rounded text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              disabled={isUpdating}
+                            />
+                            {isUpdating && (
+                              <div className="flex items-center gap-1">
+                                <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                <span className="text-xs text-blue-600">Updating...</span>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Item Total */}
+                          <div className="text-right">
+                            <p className="font-bold text-lg">₹{(item.unit_price * currentQuantity).toFixed(2)}</p>
+                          </div>
+                          
+                          {/* Remove Button */}
+                          <button
+                            onClick={() => handleRemoveItem(item.product_id, item.color, item.size)}
+                            disabled={isUpdating}
+                            className="text-red-500 hover:text-red-700 px-3 py-2 rounded-lg border border-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 text-sm"
+                          >
+                            {isUpdating ? 'Removing...' : 'Remove'}
+                          </button>
                         </div>
-                        
-                        {/* Remove Button */}
-                        <button
-                          onClick={() => handleRemoveItem(item.product_id, item.color, item.size)}
-                          disabled={isUpdating || isPending}
-                          className="text-red-500 hover:text-red-700 px-3 py-2 rounded-lg border border-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 text-sm"
-                        >
-                          {isUpdating ? 'Removing...' : 'Remove'}
-                        </button>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          
+          {cartItems.length > 0 && (
+            <div className="p-6 border-t bg-gray-50">
+              <div className="flex justify-between items-center mb-6">
+                <span className="text-xl font-bold">Total:</span>
+                <span className="text-3xl font-bold text-blue-600">₹{cartTotal.toFixed(2)}</span>
+              </div>
+              <div className="space-y-3">
+                <button
+                  onClick={handleCheckout}
+                  className="w-full bg-blue-600 text-white py-4 px-6 rounded-lg font-bold text-lg hover:bg-blue-700 transition-colors"
+                >
+                  Proceed to Checkout
+                </button>
+                <button
+                  onClick={onClose}
+                  className="w-full bg-gray-600 text-white py-3 px-6 rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  Continue Shopping
+                </button>
+              </div>
             </div>
           )}
         </div>
-        
-        {cartItems.length > 0 && (
-          <div className="p-6 border-t bg-gray-50">
-            <div className="flex justify-between items-center mb-6">
-              <span className="text-xl font-bold">Total:</span>
-              <span className="text-3xl font-bold text-blue-600">₹{cartTotal.toFixed(2)}</span>
-            </div>
-            <div className="space-y-3">
+      </div>
+
+      {/* Stock Availability Modal */}
+      {showStockModal && stockModalData && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setShowStockModal(false)}></div>
+          <div className="bg-white rounded-lg shadow-xl p-6 mx-4 max-w-md w-full relative">
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-orange-100 rounded-full flex items-center justify-center">
+                <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900">Limited Stock Available</h3>
+              <p className="text-gray-600 mb-4">
+                <span className="font-medium">{stockModalData.productName}</span><br />
+                <span className="text-sm">Color: {stockModalData.color} | Size: {stockModalData.size}</span>
+              </p>
+              <div className="bg-orange-50 rounded-lg p-4 mb-4">
+                <p className="text-orange-800">
+                  <span className="font-bold">Only {stockModalData.availableStock} units</span> are available in stock.
+                </p>
+                <p className="text-orange-600 text-sm mt-1">
+                  You requested {stockModalData.requestedQuantity} units.
+                </p>
+              </div>
               <button
-                onClick={handleCheckout}
-                className="w-full bg-blue-600 text-white py-4 px-6 rounded-lg font-bold text-lg hover:bg-blue-700 transition-colors"
+                onClick={() => setShowStockModal(false)}
+                className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors font-medium"
               >
-                Proceed to Checkout
-              </button>
-              <button
-                onClick={onClose}
-                className="w-full bg-gray-600 text-white py-3 px-6 rounded-lg hover:bg-gray-700 transition-colors"
-              >
-                Continue Shopping
+                Got it, I'll adjust the quantity
               </button>
             </div>
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      )}
+    </>
   );
 };
 
