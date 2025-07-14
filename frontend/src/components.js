@@ -1094,6 +1094,7 @@ export const SizeChart = ({ productId, selectedCategory }) => {
   const [quantities, setQuantities] = useState({});
   const [product, setProduct] = useState(null);
   const [inventory, setInventory] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchProductData = async () => {
