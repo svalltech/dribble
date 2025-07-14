@@ -1235,7 +1235,7 @@ export const SizeChart = ({ productId, selectedCategory }) => {
 
   const handleAddToCart = async () => {
     if (!product) {
-      toast.error('Product not loaded');
+      toast.error('Product is still loading, please wait...');
       return;
     }
 
