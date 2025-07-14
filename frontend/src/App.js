@@ -186,20 +186,6 @@ const PaymentCancelPage = () => {
     </div>
   );
 };
-            </button>
-            <button 
-              onClick={() => window.location.href = '/'}
-              className="w-full bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              Continue Shopping
-            </button>
-          </div>
-        </div>
-      </div>
-      <Footer />
-    </div>
-  );
-};
 
 function App() {
   return (
