@@ -611,6 +611,547 @@ class DribbleBackendTest(unittest.TestCase):
         self.assertNotEqual(response.status_code, 200, "Invalid order data should be rejected")
         print("✅ Order data validation working")
 
+    def test_21_stock_validation_endpoint(self):
+        """Test the new GET /api/products/{product_id}/stock endpoint"""
+        # First ensure we have a product ID
+        if not self.test_product_id:
+            self.test_09_get_products()
+            
+        response = requests.get(f"{BACKEND_URL}/products/{self.test_product_id}/stock")
+        self.assertEqual(response.status_code, 200, f"Get product stock failed: {response.text}")
+        
+        stock_data = response.json()
+        self.assertIn("product_id", stock_data, "Stock data should contain product_id")
+        self.assertIn("product_name", stock_data, "Stock data should contain product_name")
+        self.assertIn("variants", stock_data, "Stock data should contain variants")
+        self.assertEqual(stock_data["product_id"], self.test_product_id, "Product ID should match")
+        
+        # Verify variants structure
+        variants = stock_data["variants"]
+        self.assertIsInstance(variants, dict, "Variants should be a dictionary")
+        
+        # Check each variant has required fields
+        for variant_key, variant_data in variants.items():
+            self.assertIn("color", variant_data, f"Variant {variant_key} should have color")
+            self.assertIn("size", variant_data, f"Variant {variant_key} should have size")
+            self.assertIn("stock_quantity", variant_data, f"Variant {variant_key} should have stock_quantity")
+            self.assertIn("sku", variant_data, f"Variant {variant_key} should have sku")
+            self.assertIsInstance(variant_data["stock_quantity"], int, f"Stock quantity should be integer for {variant_key}")
+        
+        print(f"✅ Stock validation endpoint working - found {len(variants)} variants")
+        return stock_data
+
+    def test_22_cart_stock_validation_exceeding_stock(self):
+        """Test cart update with quantities exceeding available stock"""
+        # First get stock information
+        stock_data = self.test_21_stock_validation_endpoint()
+        
+        # Find a variant with limited stock
+        test_variant = None
+        for variant_key, variant_data in stock_data["variants"].items():
+            if variant_data["stock_quantity"] > 0:
+                test_variant = variant_data
+                break
+        
+        if not test_variant:
+            print("⚠️ No variants with stock available for testing")
+            return
+            
+        # Try to add more items than available stock
+        excessive_quantity = test_variant["stock_quantity"] + 10
+        cart_item = {
+            "product_id": self.test_product_id,
+            "color": test_variant["color"],
+            "size": test_variant["size"],
+            "quantity": excessive_quantity
+        }
+        
+        response = requests.post(
+            f"{BACKEND_URL}/cart/add", 
+            headers=self.get_headers(),
+            json=cart_item
+        )
+        
+        # Should fail with 400 status and specific error message
+        self.assertEqual(response.status_code, 400, "Adding excessive quantity should fail")
+        self.assertIn("Insufficient stock", response.text, "Error message should mention insufficient stock")
+        print(f"✅ Stock validation correctly prevents adding {excessive_quantity} items when only {test_variant['stock_quantity']} available")
+
+    def test_23_cart_update_stock_validation(self):
+        """Test cart update endpoint with stock validation"""
+        # First get stock information
+        stock_data = self.test_21_stock_validation_endpoint()
+        
+        # Find a variant with stock
+        test_variant = None
+        for variant_key, variant_data in stock_data["variants"].items():
+            if variant_data["stock_quantity"] >= 5:  # Need at least 5 for testing
+                test_variant = variant_data
+                break
+        
+        if not test_variant:
+            print("⚠️ No variants with sufficient stock (>=5) for testing")
+            return
+            
+        # First add a valid quantity to cart
+        valid_quantity = min(3, test_variant["stock_quantity"])
+        cart_item = {
+            "product_id": self.test_product_id,
+            "color": test_variant["color"],
+            "size": test_variant["size"],
+            "quantity": valid_quantity
+        }
+        
+        response = requests.post(
+            f"{BACKEND_URL}/cart/add", 
+            headers=self.get_headers(),
+            json=cart_item
+        )
+        
+        if response.status_code != 200:
+            print(f"⚠️ Could not add item to cart for testing: {response.text}")
+            return
+            
+        # Now try to update to excessive quantity
+        excessive_quantity = test_variant["stock_quantity"] + 5
+        update_item = {
+            "product_id": self.test_product_id,
+            "color": test_variant["color"],
+            "size": test_variant["size"],
+            "quantity": excessive_quantity
+        }
+        
+        response = requests.put(
+            f"{BACKEND_URL}/cart/update", 
+            headers=self.get_headers(),
+            json=update_item
+        )
+        
+        # Should fail with 400 status and specific error message
+        self.assertEqual(response.status_code, 400, "Updating to excessive quantity should fail")
+        self.assertIn("Insufficient stock", response.text, "Error message should mention insufficient stock")
+        self.assertIn(str(test_variant["stock_quantity"]), response.text, "Error should show available stock")
+        print(f"✅ Cart update stock validation working - prevented updating to {excessive_quantity} when only {test_variant['stock_quantity']} available")
+
+    def test_24_edge_case_zero_stock(self):
+        """Test edge case with zero stock"""
+        # Create a test product with zero stock for testing
+        if not self.admin_token:
+            self.test_02_admin_login()
+            
+        # Create product with zero stock variant
+        product_data = {
+            "name": f"Zero Stock Test Product {uuid.uuid4()}",
+            "description": "Product for testing zero stock",
+            "category": "test-category",
+            "base_price": 299.0,
+            "bulk_price": 259.0,
+            "gsm": "210",
+            "material": "100% Cotton",
+            "variants": [
+                {
+                    "color": "Black",
+                    "size": "S",
+                    "stock_quantity": 0,  # Zero stock
+                    "sku": f"ZERO-BLK-S-{uuid.uuid4()}"
+                }
+            ],
+            "images": ["https://example.com/zero-stock.jpg"]
+        }
+        
+        response = requests.post(
+            f"{BACKEND_URL}/products", 
+            headers=self.get_headers(self.admin_token),
+            json=product_data
+        )
+        
+        if response.status_code != 200:
+            print(f"⚠️ Could not create test product: {response.text}")
+            return
+            
+        zero_stock_product_id = response.json()["id"]
+        
+        # Try to add item with zero stock
+        cart_item = {
+            "product_id": zero_stock_product_id,
+            "color": "Black",
+            "size": "S",
+            "quantity": 1
+        }
+        
+        response = requests.post(
+            f"{BACKEND_URL}/cart/add", 
+            headers=self.get_headers(),
+            json=cart_item
+        )
+        
+        # Should fail with 400 status
+        self.assertEqual(response.status_code, 400, "Adding item with zero stock should fail")
+        self.assertIn("Insufficient stock", response.text, "Error message should mention insufficient stock")
+        print("✅ Zero stock validation working correctly")
+
+    def test_25_edge_case_exact_stock_limit(self):
+        """Test updating to exactly available stock quantity"""
+        # Get stock information
+        stock_data = self.test_21_stock_validation_endpoint()
+        
+        # Find a variant with stock
+        test_variant = None
+        for variant_key, variant_data in stock_data["variants"].items():
+            if variant_data["stock_quantity"] > 0:
+                test_variant = variant_data
+                break
+        
+        if not test_variant:
+            print("⚠️ No variants with stock available for testing")
+            return
+            
+        # Add exactly the available stock quantity
+        exact_quantity = test_variant["stock_quantity"]
+        cart_item = {
+            "product_id": self.test_product_id,
+            "color": test_variant["color"],
+            "size": test_variant["size"],
+            "quantity": exact_quantity
+        }
+        
+        response = requests.post(
+            f"{BACKEND_URL}/cart/add", 
+            headers=self.get_headers(),
+            json=cart_item
+        )
+        
+        # Should succeed
+        self.assertEqual(response.status_code, 200, f"Adding exact stock quantity should succeed: {response.text}")
+        print(f"✅ Exact stock limit validation working - successfully added {exact_quantity} items")
+
+    def test_26_cart_update_performance(self):
+        """Test cart quantity updates for speed and reliability"""
+        # Get stock information
+        stock_data = self.test_21_stock_validation_endpoint()
+        
+        # Find a variant with sufficient stock
+        test_variant = None
+        for variant_key, variant_data in stock_data["variants"].items():
+            if variant_data["stock_quantity"] >= 10:
+                test_variant = variant_data
+                break
+        
+        if not test_variant:
+            print("⚠️ No variants with sufficient stock (>=10) for performance testing")
+            return
+            
+        # Add initial item to cart
+        cart_item = {
+            "product_id": self.test_product_id,
+            "color": test_variant["color"],
+            "size": test_variant["size"],
+            "quantity": 1
+        }
+        
+        response = requests.post(
+            f"{BACKEND_URL}/cart/add", 
+            headers=self.get_headers(),
+            json=cart_item
+        )
+        
+        if response.status_code != 200:
+            print(f"⚠️ Could not add initial item to cart: {response.text}")
+            return
+            
+        # Test multiple rapid updates
+        update_times = []
+        max_quantity = min(10, test_variant["stock_quantity"])
+        
+        for quantity in range(2, max_quantity + 1):
+            start_time = time.time()
+            
+            update_item = {
+                "product_id": self.test_product_id,
+                "color": test_variant["color"],
+                "size": test_variant["size"],
+                "quantity": quantity
+            }
+            
+            response = requests.put(
+                f"{BACKEND_URL}/cart/update", 
+                headers=self.get_headers(),
+                json=update_item
+            )
+            
+            end_time = time.time()
+            update_time = end_time - start_time
+            update_times.append(update_time)
+            
+            self.assertEqual(response.status_code, 200, f"Cart update should succeed for quantity {quantity}")
+            
+            # Small delay to avoid overwhelming the server
+            time.sleep(0.1)
+        
+        # Calculate performance metrics
+        avg_time = sum(update_times) / len(update_times)
+        max_time = max(update_times)
+        
+        # Performance should be reasonable (under 2 seconds per update)
+        self.assertLess(avg_time, 2.0, f"Average update time should be under 2 seconds, got {avg_time:.3f}s")
+        self.assertLess(max_time, 5.0, f"Maximum update time should be under 5 seconds, got {max_time:.3f}s")
+        
+        print(f"✅ Cart update performance test passed - Avg: {avg_time:.3f}s, Max: {max_time:.3f}s")
+
+    def test_27_concurrent_cart_updates(self):
+        """Test multiple rapid updates to ensure no race conditions"""
+        # Get stock information
+        stock_data = self.test_21_stock_validation_endpoint()
+        
+        # Find a variant with sufficient stock
+        test_variant = None
+        for variant_key, variant_data in stock_data["variants"].items():
+            if variant_data["stock_quantity"] >= 5:
+                test_variant = variant_data
+                break
+        
+        if not test_variant:
+            print("⚠️ No variants with sufficient stock (>=5) for concurrent testing")
+            return
+            
+        # Add initial item to cart
+        cart_item = {
+            "product_id": self.test_product_id,
+            "color": test_variant["color"],
+            "size": test_variant["size"],
+            "quantity": 1
+        }
+        
+        response = requests.post(
+            f"{BACKEND_URL}/cart/add", 
+            headers=self.get_headers(),
+            json=cart_item
+        )
+        
+        if response.status_code != 200:
+            print(f"⚠️ Could not add initial item to cart: {response.text}")
+            return
+            
+        def update_cart_quantity(quantity):
+            """Helper function for concurrent updates"""
+            update_item = {
+                "product_id": self.test_product_id,
+                "color": test_variant["color"],
+                "size": test_variant["size"],
+                "quantity": quantity
+            }
+            
+            response = requests.put(
+                f"{BACKEND_URL}/cart/update", 
+                headers=self.get_headers(),
+                json=update_item
+            )
+            
+            return response.status_code, response.text
+        
+        # Test concurrent updates
+        max_quantity = min(5, test_variant["stock_quantity"])
+        quantities = list(range(2, max_quantity + 1))
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            # Submit concurrent update requests
+            futures = [executor.submit(update_cart_quantity, qty) for qty in quantities]
+            
+            # Collect results
+            results = []
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    status_code, response_text = future.result()
+                    results.append((status_code, response_text))
+                except Exception as e:
+                    results.append((500, str(e)))
+        
+        # At least some updates should succeed (race conditions might cause some to fail)
+        successful_updates = [r for r in results if r[0] == 200]
+        self.assertGreater(len(successful_updates), 0, "At least some concurrent updates should succeed")
+        
+        print(f"✅ Concurrent cart updates test passed - {len(successful_updates)}/{len(results)} updates succeeded")
+
+    def test_28_bulk_pricing_with_stock_limits(self):
+        """Test bulk pricing calculations with stock limits"""
+        # Get stock information
+        stock_data = self.test_21_stock_validation_endpoint()
+        
+        # Find variants with sufficient stock for bulk pricing (15+ items)
+        bulk_variants = []
+        total_available = 0
+        
+        for variant_key, variant_data in stock_data["variants"].items():
+            if variant_data["stock_quantity"] > 0:
+                bulk_variants.append(variant_data)
+                total_available += variant_data["stock_quantity"]
+                if total_available >= 15:
+                    break
+        
+        if total_available < 15:
+            print(f"⚠️ Insufficient total stock ({total_available}) for bulk pricing test (need 15+)")
+            return
+            
+        # Create order items for bulk pricing calculation
+        order_items = []
+        remaining_needed = 15
+        
+        for variant in bulk_variants:
+            if remaining_needed <= 0:
+                break
+                
+            quantity_to_add = min(remaining_needed, variant["stock_quantity"])
+            order_items.append({
+                "product_id": self.test_product_id,
+                "color": variant["color"],
+                "size": variant["size"],
+                "quantity": quantity_to_add
+            })
+            remaining_needed -= quantity_to_add
+        
+        # Test order calculation with bulk pricing
+        response = requests.post(
+            f"{BACKEND_URL}/orders/calculate", 
+            headers=self.get_headers(),
+            json=order_items
+        )
+        
+        self.assertEqual(response.status_code, 200, f"Bulk order calculation failed: {response.text}")
+        order_summary = response.json()
+        
+        # Should be marked as bulk order
+        self.assertTrue(order_summary["is_bulk_order"], "Order with 15+ items should be marked as bulk order")
+        self.assertIn("subtotal", order_summary, "Order summary should contain subtotal")
+        self.assertIn("total_amount", order_summary, "Order summary should contain total_amount")
+        
+        print(f"✅ Bulk pricing with stock limits working - calculated for {sum(item['quantity'] for item in order_items)} items")
+
+    def test_29_error_message_validation(self):
+        """Test that error messages match frontend expectations"""
+        # Get stock information
+        stock_data = self.test_21_stock_validation_endpoint()
+        
+        # Find a variant with limited stock
+        test_variant = None
+        for variant_key, variant_data in stock_data["variants"].items():
+            if 0 < variant_data["stock_quantity"] < 10:
+                test_variant = variant_data
+                break
+        
+        if not test_variant:
+            print("⚠️ No variants with limited stock for error message testing")
+            return
+            
+        # Test insufficient stock error message format
+        excessive_quantity = test_variant["stock_quantity"] + 1
+        cart_item = {
+            "product_id": self.test_product_id,
+            "color": test_variant["color"],
+            "size": test_variant["size"],
+            "quantity": excessive_quantity
+        }
+        
+        response = requests.post(
+            f"{BACKEND_URL}/cart/add", 
+            headers=self.get_headers(),
+            json=cart_item
+        )
+        
+        self.assertEqual(response.status_code, 400, "Should return 400 for insufficient stock")
+        
+        error_data = response.json()
+        self.assertIn("detail", error_data, "Error response should have 'detail' field")
+        
+        error_message = error_data["detail"]
+        self.assertIn("Insufficient stock", error_message, "Error message should contain 'Insufficient stock'")
+        
+        # Test cart update error message
+        response = requests.put(
+            f"{BACKEND_URL}/cart/update", 
+            headers=self.get_headers(),
+            json=cart_item
+        )
+        
+        self.assertEqual(response.status_code, 400, "Cart update should also return 400 for insufficient stock")
+        
+        error_data = response.json()
+        error_message = error_data["detail"]
+        self.assertIn("Insufficient stock", error_message, "Cart update error should contain 'Insufficient stock'")
+        self.assertIn(str(test_variant["stock_quantity"]), error_message, "Error should show available stock quantity")
+        
+        print("✅ Error message validation passed - messages match expected format")
+
+    def test_30_stock_recovery_after_errors(self):
+        """Test recovery from stock errors"""
+        # Get stock information
+        stock_data = self.test_21_stock_validation_endpoint()
+        
+        # Find a variant with stock
+        test_variant = None
+        for variant_key, variant_data in stock_data["variants"].items():
+            if variant_data["stock_quantity"] >= 3:
+                test_variant = variant_data
+                break
+        
+        if not test_variant:
+            print("⚠️ No variants with sufficient stock (>=3) for recovery testing")
+            return
+            
+        # First, try to add excessive quantity (should fail)
+        excessive_quantity = test_variant["stock_quantity"] + 5
+        cart_item = {
+            "product_id": self.test_product_id,
+            "color": test_variant["color"],
+            "size": test_variant["size"],
+            "quantity": excessive_quantity
+        }
+        
+        response = requests.post(
+            f"{BACKEND_URL}/cart/add", 
+            headers=self.get_headers(),
+            json=cart_item
+        )
+        
+        self.assertEqual(response.status_code, 400, "Excessive quantity should fail")
+        
+        # Now try with valid quantity (should succeed)
+        valid_quantity = min(2, test_variant["stock_quantity"])
+        cart_item["quantity"] = valid_quantity
+        
+        response = requests.post(
+            f"{BACKEND_URL}/cart/add", 
+            headers=self.get_headers(),
+            json=cart_item
+        )
+        
+        self.assertEqual(response.status_code, 200, f"Valid quantity should succeed after error: {response.text}")
+        
+        # Verify cart contains the item
+        response = requests.get(
+            f"{BACKEND_URL}/cart", 
+            headers=self.get_headers()
+        )
+        
+        self.assertEqual(response.status_code, 200, "Get cart should work after recovery")
+        cart_data = response.json()
+        
+        # Check if item was added
+        found_item = False
+        for item in cart_data.get("items", []):
+            if (item["product_id"] == self.test_product_id and 
+                item["color"] == test_variant["color"] and 
+                item["size"] == test_variant["size"]):
+                found_item = True
+                self.assertEqual(item["quantity"], valid_quantity, "Item quantity should match")
+                break
+        
+        self.assertTrue(found_item, "Item should be found in cart after recovery")
+        print("✅ Stock error recovery working correctly")
+
+if __name__ == "__main__":
+    # Run tests in order
+    unittest.main(argv=['first-arg-is-ignored'], exit=False)
+
 if __name__ == "__main__":
     # Run tests in order
     unittest.main(argv=['first-arg-is-ignored'], exit=False)
