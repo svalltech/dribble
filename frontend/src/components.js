@@ -1155,6 +1155,19 @@ export const SizeChart = ({ productId, selectedCategory }) => {
         }
       } catch (error) {
         console.error('Error fetching product data:', error);
+        
+        // Set fallback product to prevent "Product not loaded" error
+        const fallbackProduct = {
+          id: 'demo-product-1',
+          name: selectedCategory || 'Oversized Drop-shoulder, 210gsm, Terry cotton/Loopknit Heavy Gauge, 100% Cotton',
+          category: selectedCategory || 'Oversize 210gsm',
+          base_price: 319,
+          bulk_price: 279,
+          variants: []
+        };
+        
+        setProduct(fallbackProduct);
+        
         const demoInventory = {};
         sizeChartData.colors.forEach(color => {
           sizeChartData.sizes.forEach(size => {
