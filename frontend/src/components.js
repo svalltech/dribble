@@ -1238,8 +1238,13 @@ export const SizeChart = ({ productId, selectedCategory }) => {
   };
 
   const handleAddToCart = async () => {
-    if (!product) {
+    if (isLoading) {
       toast.error('Product is still loading, please wait...');
+      return;
+    }
+    
+    if (!product) {
+      toast.error('Product data not available, please refresh the page');
       return;
     }
 
