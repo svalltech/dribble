@@ -524,6 +524,33 @@ async def remove_from_cart(
     
     return {"message": "Item removed from cart"}
 
+@api_router.get("/products/{product_id}/stock")
+async def get_product_stock(
+    product_id: str,
+    database: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Get stock information for a specific product"""
+    product = await database.products.find_one({"id": product_id, "is_active": True})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Get stock information for all variants
+    stock_info = {}
+    for variant in product["variants"]:
+        key = f"{variant['color']}-{variant['size']}"
+        stock_info[key] = {
+            "color": variant["color"],
+            "size": variant["size"],
+            "stock_quantity": variant["stock_quantity"],
+            "sku": variant["sku"]
+        }
+    
+    return {
+        "product_id": product_id,
+        "product_name": product["name"],
+        "variants": stock_info
+    }
+
 # ============================================================================
 # ORDER ROUTES
 # ============================================================================
