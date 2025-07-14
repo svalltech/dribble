@@ -87,6 +87,78 @@ export const AppProvider = ({ children }) => {
 
   const addToCart = async (productId, color, size, quantity) => {
     try {
+      // Get product details for immediate UI update
+      const productResponse = await axios.get(`${API_URL}/products?limit=100`);
+      const product = productResponse.data.find(p => p.id === productId);
+      
+      if (!product) {
+        toast.error('Product not found');
+        return false;
+      }
+      
+      // Calculate pricing for immediate display
+      const currentCartQuantity = cart.items.reduce((sum, item) => sum + item.quantity, 0);
+      const totalQuantityAfterAdd = currentCartQuantity + quantity;
+      const unitPrice = totalQuantityAfterAdd >= 15 ? product.bulk_price : product.base_price;
+      
+      // Create new cart item for immediate UI update
+      const newCartItem = {
+        product_id: productId,
+        color,
+        size,
+        quantity,
+        product_name: product.name,
+        product_image: product.images?.[0],
+        unit_price: unitPrice,
+        total_price: unitPrice * quantity
+      };
+      
+      // Update cart state immediately for instant UI feedback
+      const updatedCart = { ...cart };
+      
+      // Check if item already exists in cart
+      const existingItemIndex = updatedCart.items.findIndex(item => 
+        item.product_id === productId && 
+        item.color === color && 
+        item.size === size
+      );
+      
+      if (existingItemIndex !== -1) {
+        // Update existing item
+        updatedCart.items[existingItemIndex].quantity += quantity;
+        updatedCart.items[existingItemIndex].total_price = updatedCart.items[existingItemIndex].unit_price * updatedCart.items[existingItemIndex].quantity;
+      } else {
+        // Add new item
+        updatedCart.items.push(newCartItem);
+      }
+      
+      // Recalculate total for bulk pricing
+      const newTotalQuantity = updatedCart.items.reduce((sum, item) => sum + item.quantity, 0);
+      const isBulkOrder = newTotalQuantity >= 15;
+      
+      // Update all item prices based on bulk pricing
+      updatedCart.items.forEach(item => {
+        const itemProduct = productResponse.data.find(p => p.id === item.product_id);
+        if (itemProduct) {
+          item.unit_price = isBulkOrder ? itemProduct.bulk_price : itemProduct.base_price;
+          item.total_price = item.unit_price * item.quantity;
+        }
+      });
+      
+      // Calculate new total
+      updatedCart.total = updatedCart.items.reduce((sum, item) => sum + item.total_price, 0);
+      
+      // Update cart state immediately
+      setCart(updatedCart);
+      
+      // Show success message immediately
+      toast.success('Added to cart!');
+      
+      // Trigger cart update events immediately
+      window.dispatchEvent(new Event('cartUpdated'));
+      localStorage.setItem('cartUpdate', Date.now().toString());
+      
+      // Send to backend in background
       const response = await axios.post(`${API_URL}/cart/add`, {
         product_id: productId,
         color,
@@ -95,21 +167,27 @@ export const AppProvider = ({ children }) => {
       });
       
       if (response.data) {
-        await fetchCart();
-        toast.success('Added to cart!');
-        
-        // Trigger cart update events
-        setTimeout(() => {
-          window.dispatchEvent(new Event('cartUpdated'));
-          localStorage.setItem('cartUpdate', Date.now().toString());
-        }, 100);
-        
+        // Sync with backend after a short delay
+        setTimeout(() => fetchCart(), 200);
         return true;
+      } else {
+        // Revert on backend failure
+        await fetchCart();
+        toast.error('Failed to add to cart');
+        return false;
       }
-      return false;
+      
     } catch (error) {
       console.error('Error adding to cart:', error);
-      toast.error(error.response?.data?.detail || 'Failed to add to cart');
+      
+      // Revert cart state on error
+      await fetchCart();
+      
+      if (error.response?.status === 400 && error.response?.data?.detail?.includes('stock')) {
+        toast.error(error.response.data.detail);
+      } else {
+        toast.error(error.response?.data?.detail || 'Failed to add to cart');
+      }
       return false;
     }
   };
