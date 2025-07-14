@@ -1101,16 +1101,20 @@ export const SizeChart = ({ productId, selectedCategory }) => {
         let productToLoad = null;
         
         if (selectedCategory) {
+          console.log('Fetching product for category:', selectedCategory);
           const response = await axios.get(`${API_URL}/products?category=${encodeURIComponent(selectedCategory)}&limit=1`);
           if (response.data && response.data.length > 0) {
             productToLoad = response.data[0];
+            console.log('Loaded product for category:', productToLoad.name);
           }
         }
         
         if (!productToLoad) {
+          console.log('Fetching default product...');
           const response = await axios.get(`${API_URL}/products?limit=1`);
           if (response.data && response.data.length > 0) {
             productToLoad = response.data[0];
+            console.log('Loaded default product:', productToLoad.name);
           }
         }
 
@@ -1133,12 +1137,13 @@ export const SizeChart = ({ productId, selectedCategory }) => {
             console.log('Using default size chart data');
           }
         } else {
+          console.log('No product found, using fallback');
           const fallbackProduct = {
             id: 'demo-product-1',
             name: selectedCategory || 'Oversized Drop-shoulder, 210gsm, Terry cotton/Loopknit Heavy Gauge, 100% Cotton',
             category: selectedCategory || 'Oversize 210gsm',
-            base_price: 210,
-            bulk_price: 175,
+            base_price: 319,
+            bulk_price: 279,
             variants: []
           };
           
