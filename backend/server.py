@@ -688,6 +688,250 @@ async def get_order(
     else:
         raise HTTPException(status_code=403, detail="Access denied")
 
+# ============================================================================
+# PAYMENT ROUTES (RAZORPAY)
+# ============================================================================
+
+@api_router.post("/payment/create-order")
+async def create_razorpay_order(
+    checkout_request: CheckoutRequest,
+    request: Request,
+    current_user: Optional[User] = Depends(get_current_user_db),
+    database: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Create Razorpay order for payment"""
+    try:
+        # Get cart items from current session
+        if current_user:
+            cart_filter = {"user_id": current_user.id}
+        else:
+            session_id = request.cookies.get("session_id")
+            if not session_id:
+                raise HTTPException(status_code=400, detail="No cart session found")
+            cart_filter = {"session_id": session_id}
+        
+        cart = await database.carts.find_one(cart_filter)
+        if not cart or not cart["items"]:
+            raise HTTPException(status_code=400, detail="Cart is empty")
+        
+        # Calculate order total
+        subtotal = 0
+        total_quantity = sum(item["quantity"] for item in cart["items"])
+        is_bulk_order = total_quantity >= 15
+        
+        order_items = []
+        for item in cart["items"]:
+            product = await database.products.find_one({"id": item["product_id"]})
+            if not product:
+                continue
+            
+            unit_price = product["bulk_price"] if is_bulk_order else product["base_price"]
+            total_price = unit_price * item["quantity"]
+            subtotal += total_price
+            
+            order_items.append({
+                "product_id": item["product_id"],
+                "product_name": product["name"],
+                "color": item["color"],
+                "size": item["size"],
+                "quantity": item["quantity"],
+                "unit_price": unit_price,
+                "total_price": total_price
+            })
+        
+        # Calculate taxes and shipping
+        tax_amount = subtotal * 0.18  # 18% GST
+        shipping_amount = 0 if subtotal > 500 else 50  # Free shipping above ₹500
+        total_amount = subtotal + tax_amount + shipping_amount
+        
+        # Create order in our database first
+        order_id = str(uuid.uuid4())
+        receipt_id = f"order_{int(datetime.utcnow().timestamp())}"
+        
+        order_data = {
+            "id": order_id,
+            "user_id": current_user.id if current_user else None,
+            "email": checkout_request.customer_email,
+            "phone": checkout_request.customer_phone,
+            "items": order_items,
+            "subtotal": subtotal,
+            "tax_amount": tax_amount,
+            "shipping_amount": shipping_amount,
+            "total_amount": total_amount,
+            "shipping_address": checkout_request.shipping_address.dict(),
+            "billing_address": checkout_request.billing_address.dict() if checkout_request.billing_address else checkout_request.shipping_address.dict(),
+            "status": "pending",
+            "payment_status": "pending",
+            "notes": checkout_request.notes,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }
+        
+        # Create Razorpay order
+        razorpay_order = razorpay_client.order.create({
+            "amount": int(total_amount * 100),  # Amount in paise
+            "currency": "INR",
+            "receipt": receipt_id,
+            "payment_capture": 1
+        })
+        
+        # Update order with Razorpay details
+        order_data["razorpay_order_id"] = razorpay_order["id"]
+        order_data["razorpay_receipt"] = receipt_id
+        
+        # Save order to database
+        await database.orders.insert_one(order_data)
+        
+        # Return order details for frontend
+        return {
+            "order_id": order_id,
+            "razorpay_order_id": razorpay_order["id"],
+            "amount": total_amount,
+            "currency": "INR",
+            "key_id": os.environ.get('RAZORPAY_KEY_ID'),
+            "customer_details": {
+                "name": checkout_request.customer_name,
+                "email": checkout_request.customer_email,
+                "contact": checkout_request.customer_phone
+            },
+            "order_details": {
+                "items": order_items,
+                "subtotal": subtotal,
+                "tax_amount": tax_amount,
+                "shipping_amount": shipping_amount,
+                "total_amount": total_amount
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error creating Razorpay order: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to create order: {str(e)}")
+
+@api_router.post("/payment/verify")
+async def verify_payment(
+    verification: PaymentVerification,
+    database: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Verify Razorpay payment signature"""
+    try:
+        # Verify payment signature
+        generated_signature = hmac.new(
+            os.environ.get('RAZORPAY_KEY_SECRET').encode(),
+            f"{verification.razorpay_order_id}|{verification.razorpay_payment_id}".encode(),
+            hashlib.sha256
+        ).hexdigest()
+        
+        if generated_signature != verification.razorpay_signature:
+            raise HTTPException(status_code=400, detail="Invalid payment signature")
+        
+        # Find and update order
+        order = await database.orders.find_one({"razorpay_order_id": verification.razorpay_order_id})
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        # Update order status
+        await database.orders.update_one(
+            {"razorpay_order_id": verification.razorpay_order_id},
+            {
+                "$set": {
+                    "payment_status": "completed",
+                    "status": "confirmed",
+                    "payment_id": verification.razorpay_payment_id,
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+        
+        # Clear the cart after successful payment
+        if order.get("user_id"):
+            await database.carts.delete_one({"user_id": order["user_id"]})
+        
+        return {
+            "status": "success",
+            "order_id": order["id"],
+            "payment_id": verification.razorpay_payment_id,
+            "message": "Payment verified successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error verifying payment: {str(e)}")
+        raise HTTPException(status_code=500, detail="Payment verification failed")
+
+@api_router.post("/payment/webhook")
+async def razorpay_webhook(
+    request: Request,
+    database: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Handle Razorpay webhooks"""
+    try:
+        # Get webhook signature
+        signature = request.headers.get("X-Razorpay-Signature")
+        if not signature:
+            raise HTTPException(status_code=400, detail="Missing webhook signature")
+        
+        # Get request body
+        body = await request.body()
+        
+        # Verify webhook signature (if webhook secret is configured)
+        webhook_secret = os.environ.get('RAZORPAY_WEBHOOK_SECRET')
+        if webhook_secret:
+            generated_signature = hmac.new(
+                webhook_secret.encode(),
+                body,
+                hashlib.sha256
+            ).hexdigest()
+            
+            if generated_signature != signature:
+                raise HTTPException(status_code=400, detail="Invalid webhook signature")
+        
+        # Parse webhook payload
+        payload = json.loads(body.decode())
+        event = payload.get("event")
+        
+        if event == "payment.captured":
+            # Payment was captured successfully
+            payment_data = payload.get("payload", {}).get("payment", {}).get("entity", {})
+            order_id = payment_data.get("order_id")
+            payment_id = payment_data.get("id")
+            
+            if order_id and payment_id:
+                await database.orders.update_one(
+                    {"razorpay_order_id": order_id},
+                    {
+                        "$set": {
+                            "payment_status": "completed",
+                            "status": "confirmed",
+                            "payment_id": payment_id,
+                            "updated_at": datetime.utcnow()
+                        }
+                    }
+                )
+        
+        elif event == "payment.failed":
+            # Payment failed
+            payment_data = payload.get("payload", {}).get("payment", {}).get("entity", {})
+            order_id = payment_data.get("order_id")
+            
+            if order_id:
+                await database.orders.update_one(
+                    {"razorpay_order_id": order_id},
+                    {
+                        "$set": {
+                            "payment_status": "failed",
+                            "status": "cancelled",
+                            "updated_at": datetime.utcnow()
+                        }
+                    }
+                )
+        
+        return {"status": "processed"}
+        
+    except Exception as e:
+        logger.error(f"Webhook processing error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Webhook processing failed")
+
 # Include all routers
 app.include_router(api_router)
 app.include_router(info_router)
