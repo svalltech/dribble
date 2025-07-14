@@ -411,11 +411,10 @@ export const Header = () => {
 export const CartModal = ({ onClose }) => {
   const { cart, removeFromCart, fetchCart, updateCartQuantity } = useApp();
   const [localQuantities, setLocalQuantities] = useState({});
-  const [updatingItems, setUpdatingItems] = useState({});
   const [stockInfo, setStockInfo] = useState({});
   const [showStockModal, setShowStockModal] = useState(false);
   const [stockModalData, setStockModalData] = useState(null);
-  const debounceTimers = useRef({});
+  const updateTimeouts = useRef({});
 
   useEffect(() => {
     fetchCart();
@@ -436,10 +435,10 @@ export const CartModal = ({ onClose }) => {
     }
   }, [cart.items]);
 
-  // Cleanup debounce timers on unmount
+  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
-      Object.values(debounceTimers.current).forEach(timer => clearTimeout(timer));
+      Object.values(updateTimeouts.current).forEach(timeout => clearTimeout(timeout));
     };
   }, []);
 
@@ -463,26 +462,25 @@ export const CartModal = ({ onClose }) => {
   };
 
   const handleRemoveItem = async (productId, color, size) => {
-    const key = `${productId}-${color}-${size}`;
-    setUpdatingItems(prev => ({ ...prev, [key]: true }));
-    
     try {
       await removeFromCart(productId, color, size);
     } catch (error) {
       console.error('Error removing item:', error);
       toast.error('Failed to remove item from cart');
-    } finally {
-      setUpdatingItems(prev => ({ ...prev, [key]: false }));
     }
   };
 
   const handleQuantityChange = (item, newQuantity) => {
     const key = `${item.product_id}-${item.color}-${item.size}`;
-    const quantity = Math.max(0, parseInt(newQuantity) || 0);
-    const availableStock = stockInfo[key] || 0;
+    let quantity = parseInt(newQuantity) || 0;
+    
+    // Ensure minimum quantity is 1 (except for explicit 0 to remove)
+    if (quantity < 0) quantity = item.quantity; // Revert invalid input
+    
+    const availableStock = stockInfo[key] || 999;
     
     // Check if quantity exceeds available stock
-    if (quantity > availableStock) {
+    if (quantity > availableStock && quantity > 0) {
       setStockModalData({
         productName: item.product_name,
         color: item.color,
@@ -497,77 +495,67 @@ export const CartModal = ({ onClose }) => {
     // Update local state immediately for instant UI response
     setLocalQuantities(prev => ({ ...prev, [key]: quantity }));
     
-    // Clear any existing timer for this item
-    if (debounceTimers.current[key]) {
-      clearTimeout(debounceTimers.current[key]);
+    // Clear any existing timeout for this item
+    if (updateTimeouts.current[key]) {
+      clearTimeout(updateTimeouts.current[key]);
     }
     
-    // Set up debounced update (300ms delay for faster response)
-    debounceTimers.current[key] = setTimeout(() => {
-      handleDebouncedQuantityUpdate(item, quantity);
-    }, 300);
-  };
-
-  const handleDebouncedQuantityUpdate = async (item, newQuantity) => {
-    const key = `${item.product_id}-${item.color}-${item.size}`;
-    const originalQuantity = item.quantity;
-    
-    // Skip if no change
-    if (newQuantity === originalQuantity) return;
-    
-    // Skip if already updating this item
-    if (updatingItems[key]) return;
-    
-    setUpdatingItems(prev => ({ ...prev, [key]: true }));
-    
-    try {
-      if (newQuantity === 0) {
-        // Remove item completely
-        await removeFromCart(item.product_id, item.color, item.size);
-      } else {
-        // Update quantity
-        await updateCartQuantity(item.product_id, item.color, item.size, newQuantity);
-      }
-    } catch (error) {
-      console.error('Error updating quantity:', error);
-      
-      // Check if it's a stock error
-      if (error.response?.status === 400 && error.response?.data?.detail?.includes('stock')) {
-        const stockMatch = error.response.data.detail.match(/Only (\d+) units available/);
-        const availableStock = stockMatch ? parseInt(stockMatch[1]) : 0;
+    // Set up immediate update for UI, delayed sync with backend
+    updateTimeouts.current[key] = setTimeout(async () => {
+      try {
+        if (quantity === 0) {
+          // Remove item completely
+          await removeFromCart(item.product_id, item.color, item.size);
+        } else {
+          // Update quantity
+          await updateCartQuantity(item.product_id, item.color, item.size, quantity);
+        }
+      } catch (error) {
+        console.error('Error updating quantity:', error);
         
-        setStockModalData({
-          productName: item.product_name,
-          color: item.color,
-          size: item.size,
-          availableStock: availableStock,
-          requestedQuantity: newQuantity
-        });
-        setShowStockModal(true);
-      } else {
-        toast.error('Failed to update quantity. Please try again.');
+        // Check if it's a stock error
+        if (error.response?.status === 400 && error.response?.data?.detail?.includes('stock')) {
+          const stockMatch = error.response.data.detail.match(/Only (\d+) units available/);
+          const availableStock = stockMatch ? parseInt(stockMatch[1]) : 0;
+          
+          setStockModalData({
+            productName: item.product_name,
+            color: item.color,
+            size: item.size,
+            availableStock: availableStock,
+            requestedQuantity: quantity
+          });
+          setShowStockModal(true);
+        }
+        
+        // Revert to original quantity on error
+        setLocalQuantities(prev => ({ ...prev, [key]: item.quantity }));
       }
       
-      // Revert to original quantity on error
-      setLocalQuantities(prev => ({ ...prev, [key]: originalQuantity }));
-    } finally {
-      setUpdatingItems(prev => ({ ...prev, [key]: false }));
-    }
+      delete updateTimeouts.current[key];
+    }, 150); // Very short delay for responsive feel
   };
 
   const handleQuantityBlur = (item) => {
     const key = `${item.product_id}-${item.color}-${item.size}`;
     const newQuantity = localQuantities[key];
     
-    // Clear any pending debounced update and trigger immediate update
-    if (debounceTimers.current[key]) {
-      clearTimeout(debounceTimers.current[key]);
-      delete debounceTimers.current[key];
+    // Ensure we have a valid quantity on blur
+    if (newQuantity === undefined || newQuantity === null || newQuantity === '') {
+      setLocalQuantities(prev => ({ ...prev, [key]: item.quantity }));
+      return;
     }
     
-    // Only update if there's a difference and no pending update
-    if (newQuantity !== item.quantity && !updatingItems[key]) {
-      handleDebouncedQuantityUpdate(item, newQuantity);
+    // Clear any pending timeout and trigger immediate update
+    if (updateTimeouts.current[key]) {
+      clearTimeout(updateTimeouts.current[key]);
+      delete updateTimeouts.current[key];
+      
+      // Trigger immediate update
+      const quantity = parseInt(newQuantity) || item.quantity;
+      if (quantity !== item.quantity) {
+        handleQuantityChange(item, quantity);
+      }
     }
   };
 
@@ -615,7 +603,6 @@ export const CartModal = ({ onClose }) => {
                 {cartItems.map((item, index) => {
                   const key = `${item.product_id}-${item.color}-${item.size}`;
                   const currentQuantity = localQuantities[key] ?? item.quantity;
-                  const isUpdating = updatingItems[key];
                   const availableStock = stockInfo[key] || 0;
                   
                   return (
@@ -637,20 +624,13 @@ export const CartModal = ({ onClose }) => {
                             <label className="text-sm font-medium">Qty:</label>
                             <input
                               type="number"
-                              min="0"
+                              min="1"
                               max={availableStock}
                               value={currentQuantity}
                               onChange={(e) => handleQuantityChange(item, e.target.value)}
                               onBlur={() => handleQuantityBlur(item)}
                               className="w-20 px-2 py-1 border border-gray-300 rounded text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              disabled={isUpdating}
                             />
-                            {isUpdating && (
-                              <div className="flex items-center gap-1">
-                                <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                                <span className="text-xs text-blue-600">Updating...</span>
-                              </div>
-                            )}
                           </div>
                           
                           {/* Item Total */}
@@ -661,10 +641,9 @@ export const CartModal = ({ onClose }) => {
                           {/* Remove Button */}
                           <button
                             onClick={() => handleRemoveItem(item.product_id, item.color, item.size)}
-                            disabled={isUpdating}
-                            className="text-red-500 hover:text-red-700 px-3 py-2 rounded-lg border border-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 text-sm"
+                            className="text-red-500 hover:text-red-700 px-3 py-2 rounded-lg border border-red-500 hover:bg-red-50 transition-colors text-sm"
                           >
-                            {isUpdating ? 'Removing...' : 'Remove'}
+                            Remove
                           </button>
                         </div>
                       </div>
